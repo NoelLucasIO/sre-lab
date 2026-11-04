@@ -24,7 +24,7 @@ fi
 wait "$HOLDER" || { echo "holder apply failed, see $LOG/holder.log"; exit 1; }
 
 terraform destroy -auto-approve -input=false >/dev/null
-psql -X -q "$PG_CONN_STR" -c 'DROP SCHEMA IF EXISTS locktest CASCADE'
+PGSSLROOTCERT=system psql -X -q "$PG_CONN_STR" -c 'DROP SCHEMA IF EXISTS locktest CASCADE'
 rm -rf .terraform .terraform.lock.hcl
 
 echo "$RESULT"

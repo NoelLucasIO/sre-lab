@@ -7,7 +7,9 @@ set -euo pipefail
 PGHOST=${PGHOST:-pgsql.noellucas.io}
 PGPORT=${PGPORT:-5432}
 ADMIN=${PGADMIN_USER:-postgres}
-SSLMODE=${SSLMODE:-require}          # set SSLMODE=disable only if the server has no TLS yet
+SSLMODE=${SSLMODE:-verify-full}      # needs pg-tls-sync.sh run first (LE wildcard on Postgres)
+# psql: trust the OS CA bundle (libpq 16+). Terraform's Go driver uses system roots without this.
+export PGSSLROOTCERT=system
 ROLE=tfstate DB=tfstate
 SCHEMAS=(lab prod_lab)               # one schema per environment = separate state + separate lock space
 ENV_DIR="$HOME/.config/terraform"

@@ -16,8 +16,12 @@ real if the store returns `412 Precondition Failed` to the second writer.
   <https://garagehq.deuxfleurs.fr/documentation/reference-manual/known-issues/>
 - Garage v2.4.1 accepts the header and ignores it: two create-only PUTs to one key both return 200
   (lance-format/lance#9762).
-- Reproduced locally with `garage/garage-lock-test.sh`: second create-only PUT returns 200, not 412.
-  _(fill in date and output after running)_
+- Reproduced locally on 2026-11-04 against Garage v2.4.1 (single node, fedora host) with
+  `garage/garage-lock-test.sh`:
+  ```
+  first create: 200   second create (should be 412): 200
+  FAIL: lock would not exclude a second writer
+  ```
 
 The failure is silent. A `.tflock` object still appears during runs, so a "lock file is present"
 check passes while nothing prevents a concurrent apply from overwriting state.

@@ -1,0 +1,9 @@
+# ~/.config/systemd/user/pg-tls-sync.service
+[Unit]
+Description=Sync Let's Encrypt *.noellucas.io cert into the postgres container
+After=postgres.service
+Requires=postgres.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/sre-lab/postgres/pg-tls-sync.sh

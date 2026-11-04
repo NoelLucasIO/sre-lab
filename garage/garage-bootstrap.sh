@@ -8,7 +8,7 @@ QUOTA=500GiB
 CAPACITY=10T                             # layout weight only; quotas are the real limiter
 CRED_DIR="$HOME/.config/garage"
 QUADLET_DIR="$HOME/.config/containers/systemd"
-G=(podman exec garage /garage)
+G=(podman exec -e RUST_LOG=warn garage /garage)
 
 log(){ printf '\e[1;34m==>\e[0m %s\n' "$*"; }
 die(){ printf '\e[1;31mERR\e[0m %s\n' "$*" >&2; exit 1; }
@@ -75,7 +75,7 @@ for b in "${BUCKETS[@]}"; do
 done
 
 # --- CLI wrapper -----------------------------------------------------------
-printf '#!/bin/sh\nexec podman exec -i garage /garage "$@"\n' >"$HOME/.local/bin/garage"
+printf '#!/bin/sh\nexec podman exec -i -e RUST_LOG=warn garage /garage "$@"\n' >"$HOME/.local/bin/garage"
 chmod 0755 "$HOME/.local/bin/garage"
 
 log "Done"
