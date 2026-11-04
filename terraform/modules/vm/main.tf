@@ -4,15 +4,6 @@ locals {
   # Deterministic MAC (QEMU OUI) so the NIC, cloud-init match and any DHCP reservation never drift.
   h   = md5(var.name)
   mac = format("52:54:00:%s:%s:%s", substr(local.h, 0, 2), substr(local.h, 2, 2), substr(local.h, 4, 2))
-}
-
-resource "libvirt_cloudinit_disk" "this" {
-  name = "${var.name}-cloudinit"
-
-  meta_data = yamlencode({
-    "instance-id"    = var.name
-    "local-hostname" = var.name
-  })
 
   user_data = join("\n", ["#cloud-config", yamlencode({
     hostname                  = var.name
@@ -37,24 +28,47 @@ resource "libvirt_cloudinit_disk" "this" {
     version = 2
     ethernets = {
       lan0 = {
-        match       = { macaddress = local.mac }
-        "set-name"  = "eth0"
-        addresses   = [var.ipv4_cidr]
-        routes      = [{ to = "default", via = var.gateway }]
+        match      = { macaddress = local.mac }
+        "set-name" = "eth0"
+        addresses  = [var.ipv4_cidr]
+        # 0.0.0.0/0, not "default": cloud-init 24.4's sysconfig renderer (Rocky 9) rejects "default"
+        # and aborts init-local, leaving the NIC on DHCP.
+        routes      = [{ to = "0.0.0.0/0", via = var.gateway }]
         nameservers = { addresses = var.dns_servers, search = [var.domain] }
       }
     }
   })
+
+  # cloud-init runs once per instance-id. Hashing the config into it makes any config change
+  # re-run cloud-init on the existing disk instead of being silently ignored.
+  instance_id = "${var.name}-${substr(sha256("${local.user_data}${local.network_config}"), 0, 8)}"
+}
+
+resource "libvirt_cloudinit_disk" "this" {
+  name = "${var.name}-cloudinit"
+
+  meta_data = yamlencode({
+    "instance-id"    = local.instance_id
+    "local-hostname" = var.name
+  })
+
+  user_data      = local.user_data
+  network_config = local.network_config
 }
 
 resource "libvirt_volume" "cloudinit" {
   name = "${var.name}-cloudinit.iso"
   pool = var.pool
   target = {
-    format = { type = "raw" }
+    # libvirt reports ISO uploads as "iso"; declaring "raw" makes v0.9.9 fail after apply.
+    format = { type = "iso" }
   }
   create = {
     content = { url = libvirt_cloudinit_disk.this.path }
+  }
+
+  lifecycle {
+    replace_triggered_by = [libvirt_cloudinit_disk.this]
   }
 }
 
@@ -83,6 +97,23 @@ resource "libvirt_domain" "this" {
   autostart   = true
 
   cpu = { mode = "host-passthrough" }
+
+  # q35 needs ACPI for Linux to enumerate PCIe root ports (every virtio device sits behind one).
+  # virt-install adds these by default; the v0.9 provider mirrors raw XML and adds nothing.
+  features = {
+    acpi    = true
+    apic    = {}
+    vm_port = { state = "off" }
+  }
+
+  clock = {
+    offset = "utc"
+    timer = [
+      { name = "rtc", tick_policy = "catchup" },
+      { name = "pit", tick_policy = "delay" },
+      { name = "hpet", present = "no" },
+    ]
+  }
 
   os = {
     type         = "hvm"
@@ -118,5 +149,15 @@ resource "libvirt_domain" "this" {
       model   = "virtio"
       backend = { random = "/dev/urandom" }
     }]
+    # Local-only framebuffer: Cockpit's Console tab and `virsh screenshot` for boot triage.
+    # (v0.9.9 can't express a pty serial console: its pty schema requires a fixed path.)
+    videos   = [{ model = { type = "virtio" } }]
+    graphics = [{ vnc = { auto_port = true, listen = "127.0.0.1" } }]
+  }
+
+  # v0.9.9 can't update a domain in place ("Update Not Supported"), so any change to the
+  # attached volumes recreates the domain. The root disk is a separate resource and survives.
+  lifecycle {
+    replace_triggered_by = [libvirt_volume.cloudinit, libvirt_volume.root]
   }
 }
