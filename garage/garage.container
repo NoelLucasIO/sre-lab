@@ -20,7 +20,8 @@ Secret=garage-metrics-token,mode=0400
 Environment=RUST_LOG=garage=info
 NoNewPrivileges=true
 DropCapability=ALL
-HealthCmd=/garage status
+# exec form: the distroless image has no /bin/sh, so a shell-form check always fails
+HealthCmd=["/garage", "status"]
 HealthInterval=60s
 HealthStartPeriod=30s
 HealthOnFailure=kill
