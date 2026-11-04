@@ -1,0 +1,37 @@
+# ~/.config/containers/systemd/garage.container  (rootless, user nlucas, linger)
+[Unit]
+Description=Garage S3 object store (sre-lab backups)
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=garage
+Image=docker.io/dxflrs/garage:v2.4.1
+Network=host
+# Config + LMDB metadata on /990 (NVMe xfs, no CoW). Bulk data + metadata snapshots on /data (RAID1),
+# so losing the /990 NVMe still leaves a restorable metadata snapshot next to the blocks.
+Volume=/990/garage/garage.toml:/etc/garage.toml:ro
+Volume=/990/garage/meta:/var/lib/garage/meta
+Volume=/data/garage/data:/var/lib/garage/data
+Volume=/data/garage/snapshots:/var/lib/garage/snapshots
+Secret=garage-rpc-secret,mode=0400
+Secret=garage-admin-token,mode=0400
+Secret=garage-metrics-token,mode=0400
+Environment=RUST_LOG=garage=info
+NoNewPrivileges=true
+DropCapability=ALL
+HealthCmd=/garage status
+HealthInterval=60s
+HealthStartPeriod=30s
+HealthOnFailure=kill
+
+[Service]
+# User units can't reliably order on system mounts; refuse to start onto an empty mountpoint instead.
+ExecStartPre=/usr/bin/mountpoint -q /data
+ExecStartPre=/usr/bin/mountpoint -q /990
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target
