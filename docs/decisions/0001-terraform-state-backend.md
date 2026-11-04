@@ -40,7 +40,12 @@ check passes while nothing prevents a concurrent apply from overwriting state.
 
 `terraform/lock-test/run.sh` holds the lock for 20 seconds and starts a second run with
 `-lock-timeout=0s`. Pass condition: the second run fails with `Error acquiring the state lock`.
-_(fill in date and output after running)_
+
+Result on 2026-11-04 (Terraform v1.17.1, Postgres 18, fedora host), connecting with
+`sslmode=verify-full` against the Let's Encrypt wildcard on `pgsql.noellucas.io`:
+```
+PASS: second writer refused (Lock Info)
+```
 
 ## Consequences
 
