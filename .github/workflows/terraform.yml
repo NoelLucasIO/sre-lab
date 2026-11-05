@@ -12,6 +12,7 @@ on:
     paths:
       - 'terraform/**'
       - 'policy/**'
+      - 'keys/**'          # baked into VM cloud-init by envs/lab
       - 'ci/risk-check*'
       - '.tflint.hcl'
       - '.checkov.yaml'
@@ -21,6 +22,7 @@ on:
     paths:
       - 'terraform/**'
       - 'policy/**'
+      - 'keys/**'          # baked into VM cloud-init by envs/lab
       - 'ci/risk-check*'
       - '.tflint.hcl'
       - '.checkov.yaml'
