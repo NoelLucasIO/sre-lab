@@ -37,3 +37,7 @@ a fork PR can rewrite the workflow and execute arbitrary code on the runner host
   just `k3s-*`. Scoping it needs libvirt's polkit access driver with per-domain rules; deferred.
 - The runner currently shares credentials with `nlucas`'s Terraform setup. Issuing it dedicated
   tokens gives independent revocation; tracked as a follow-up.
+
+## Amendment 2026-11-05: RestrictSUIDSGID removed
+
+`RestrictSUIDSGID=yes` made the runner fail to unpack actions: tar returned ENOSYS on open/mkdir. A test that dropped one hardening option at a time showed it was the only cause. It was removed. The remaining risk is small: `NoNewPrivileges=yes` stops anything the runner executes from gaining privileges, and `/var/lib/gh-runner` is mode 700, so no other user can reach a setuid file created there.

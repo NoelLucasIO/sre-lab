@@ -21,7 +21,6 @@ RestartSec=10
 # Hardening: the runner executes repo code, so assume a job can be hostile.
 NoNewPrivileges=yes
 CapabilityBoundingSet=
-RestrictSUIDSGID=yes
 ProtectSystem=strict
 ReadWritePaths=/var/lib/gh-runner
 ProtectHome=yes
