@@ -12,6 +12,7 @@ on:
     paths:
       - 'terraform/**'
       - 'policy/**'
+      - 'keys/**'          # baked into VM cloud-init by envs/lab
       - 'ci/risk-check*'
       - '.tflint.hcl'
       - '.checkov.yaml'
@@ -21,6 +22,7 @@ on:
     paths:
       - 'terraform/**'
       - 'policy/**'
+      - 'keys/**'          # baked into VM cloud-init by envs/lab
       - 'ci/risk-check*'
       - '.tflint.hcl'
       - '.checkov.yaml'
@@ -157,7 +159,7 @@ jobs:
           args=(--max-destroy 2)
           [ "$OVERRIDE" = true ] && args+=(--override)
           [ "$GITHUB_EVENT_NAME" = pull_request ] || args+=(--report-only)
-          read -ra specs < "$RUNNER_TEMP/specs"
+          read -ra specs < "$RUNNER_TEMP/specs" || true   # read returns 1 at EOF without newline; array is still filled
           set +e
           python3 -I ci/risk-check.py "${args[@]}" "${specs[@]}" > "$RUNNER_TEMP/risk.md"
           rc=$?
