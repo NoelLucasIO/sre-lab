@@ -1,3 +1,6 @@
-k3s-server-1.noellucas.io,192.168.2.40 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBjbD78jwYAsu+z0fIr8qjMO3DO0mxGlAvFWCLlfRGLH
-k3s-agent-1.noellucas.io,192.168.2.41 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKSg1ielazxY4Oc8fJDdcyuxpvyeUP1kUyYGMzhz11ZR
-k3s-agent-2.noellucas.io,192.168.2.42 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOthX26tp7Y33fr1DuEu9jIpTIt7eKb1B+HwHZATF8sW
+# k3s-server-1.noellucas.io:22 SSH-2.0-OpenSSH_9.9
+k3s-server-1.noellucas.io,192.168.2.40 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM06Pbh0rRYIW8gGXsVEo042jN3909tIpmyLX2GEQY29
+# k3s-agent-1.noellucas.io:22 SSH-2.0-OpenSSH_9.9
+k3s-agent-1.noellucas.io,192.168.2.41 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMWlJJnpcZLhbYse/zJxQrISWa5ooqlOLNRgN1qhiwhB
+# k3s-agent-2.noellucas.io:22 SSH-2.0-OpenSSH_9.9
+k3s-agent-2.noellucas.io,192.168.2.42 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINUZh0dqtKYZSRDtkXDOFRioiJrhiNiKQBtEub7sfdYZ

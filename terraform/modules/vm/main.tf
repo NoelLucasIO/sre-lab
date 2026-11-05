@@ -12,6 +12,9 @@ locals {
     manage_etc_hosts          = true
     ssh_pwauth                = false
     disable_root              = true
+    # Keep SSH host keys across instance-id changes (any cloud-init edit). The default (true)
+    # regenerates them, which breaks the runner's pinned known_hosts. Keys are still created on first boot.
+    ssh_deletekeys = false
     users = [{
       name                = var.admin_user
       groups              = ["wheel"]
