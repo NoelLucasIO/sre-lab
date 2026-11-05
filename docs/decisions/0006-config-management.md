@@ -22,3 +22,7 @@ Terraform (`envs/lab`) builds three Rocky 9 VMs. Something has to install and co
 - The job verifies the result (every node `Ready`), not just that the playbook exited 0.
 - The runner has no `kubectl` yet, so the collection skips copying the kubeconfig to the controller. The Nightscout deploy step will add a pinned `kubectl` and a kubeconfig for `gh-runner`.
 - The VM nodes reach `get.k3s.io`, GitHub releases and `rpm.rancher.io` during install; an offline install would need the collection's airgap role.
+
+## Amendment 2026-11-05: undeclared collection dependency
+
+The first converge installed the server, then failed on both agents: `No filter named 'ansible.utils.ipwrap'`. `k3s.orchestration` 1.2.2 uses that filter but does not declare `ansible.utils` in its `galaxy.yml` (its README asks only for the `netaddr` Python library the filter needs). `--syntax-check` passed because filters resolve only when a template renders. Fix: pin `ansible.utils` 6.1.1. Prevention: the PR syntax job now resolves every module, filter and test FQCN the collection's roles reference (35 at 1.2.2) and fails on any that is missing.
