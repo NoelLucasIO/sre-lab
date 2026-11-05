@@ -18,7 +18,7 @@ garage/           Garage S3 (rootless Podman quadlet), backup target
 keys/             Public SSH keys baked into VMs by cloud-init
 policy/           Custom Checkov policies + their self-test
 postgres/         Terraform state database bootstrap
-terraform/envs/   Per-environment root modules (lab, prod-lab)
+terraform/envs/   Root modules: lab (k3s VMs + DNS), lab-base (cloud images), observability (Grafana), prod-lab
 terraform/lock-test/  Proof that state locking excludes a second writer
 ```
 
@@ -41,6 +41,8 @@ terraform/lock-test/  Proof that state locking excludes a second writer
 - [ADR 0002: Separate state for long-lived artifacts](docs/decisions/0002-state-layering.md)
 - [ADR 0003: Policy-as-code layers](docs/decisions/0003-policy-as-code.md): built-in Checkov
   policies evaluated 0 checks here; custom policies are tested against violating fixtures.
+- [ADR 0004: Observability config gets its own state](docs/decisions/0004-state-split.md): VM rebuilds
+  can no longer reach the shared Prometheus data source.
 
 ## Host
 
