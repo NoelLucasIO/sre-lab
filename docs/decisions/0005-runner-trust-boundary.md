@@ -41,3 +41,5 @@ a fork PR can rewrite the workflow and execute arbitrary code on the runner host
 ## Amendment 2026-11-05: RestrictSUIDSGID removed
 
 `RestrictSUIDSGID=yes` made the runner fail to unpack actions: tar returned ENOSYS on open/mkdir. A test that dropped one hardening option at a time showed it was the only cause. It was removed. The remaining risk is small: `NoNewPrivileges=yes` stops anything the runner executes from gaining privileges, and `/var/lib/gh-runner` is mode 700, so no other user can reach a setuid file created there.
+
+Also, `KillMode=process` (from the upstream runner template) let the old `Runner.Listener` survive `systemctl restart`. It kept the old seccomp filter and kept taking jobs, which looked like the fix had failed; comparing `Seccomp_filters` in /proc showed it. The unit now uses `KillMode=mixed`.
