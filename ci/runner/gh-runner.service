@@ -1,0 +1,42 @@
+# /etc/systemd/system/gh-runner.service — installed by ci/runner/install.sh
+# Trust boundary for CI on fedora: see docs/decisions/0005-runner-trust-boundary.md.
+[Unit]
+Description=GitHub Actions runner (NoelLucasIO/sre-lab)
+Wants=network-online.target
+After=network-online.target virtqemud.socket
+
+[Service]
+User=gh-runner
+Group=gh-runner
+SupplementaryGroups=libvirt
+WorkingDirectory=/var/lib/gh-runner/actions-runner
+ExecStart=/var/lib/gh-runner/actions-runner/run.sh
+Environment=HOME=/var/lib/gh-runner TF_IN_AUTOMATION=1 TF_PLUGIN_CACHE_DIR=/var/lib/gh-runner/.terraform.d/plugin-cache
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=5min
+Restart=always
+RestartSec=10
+
+# Hardening: the runner executes repo code, so assume a job can be hostile.
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+RestrictSUIDSGID=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/gh-runner
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
