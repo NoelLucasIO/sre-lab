@@ -1,14 +1,18 @@
 # sre-lab: Terraform pipeline
-#   PR:          static checks (GitHub-hosted) -> plan per root (self-hosted) -> sticky PR comment
-#   push main:   static checks -> plan saved on runner disk -> apply (environment `lab`, required reviewer)
+#   PR:          static checks (GitHub-hosted) -> plan per root (self-hosted) -> change-risk gate -> sticky PR comment
+#   push main:   static checks -> plan saved on runner disk -> risk report -> apply (environment `lab`, required reviewer)
 # Plan files never leave the runner (no artifacts): this is a public repo and plan files hold raw values.
+# Change risk: >2 destroys/replaces, or anything tagged `critical`, fails the PR unless it has the
+# `override-risk` label. On main it is report-only (job summary), so the reviewer sees it before approving.
 name: terraform
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     paths:
       - 'terraform/**'
       - 'policy/**'
+      - 'ci/risk-check*'
       - '.tflint.hcl'
       - '.checkov.yaml'
       - '.github/workflows/terraform.yml'
@@ -17,6 +21,7 @@ on:
     paths:
       - 'terraform/**'
       - 'policy/**'
+      - 'ci/risk-check*'
       - '.tflint.hcl'
       - '.checkov.yaml'
       - '.github/workflows/terraform.yml'
@@ -76,6 +81,9 @@ jobs:
       - name: policy fixture tests
         run: ./policy/test.sh
 
+      - name: change-risk gate tests
+        run: ./ci/risk-check-test.sh
+
   plan:
     name: plan
     needs: static
@@ -107,6 +115,7 @@ jobs:
           out="$RUNNER_TEMP/comment.md"
           printf '### Terraform plan for `%s`\n\n' "${GITHUB_SHA::7}" > "$out"
           changed=""; failed=""
+          : > "$RUNNER_TEMP/specs"
 
           for r in $ROOTS; do
             d="terraform/envs/$r"
@@ -124,6 +133,10 @@ jobs:
               2) status="<b>changes</b>"; changed="$changed $r" ;;
               *) status="<b>FAILED (exit $rc)</b>"; failed="$failed $r" ;;
             esac
+            if [ "$rc" = 2 ]; then
+              terraform -chdir="$d" show -json "$HOME/plans/$GITHUB_SHA/$r.tfplan" > "$RUNNER_TEMP/$r.plan.json"
+              printf '%s ' "$r=$RUNNER_TEMP/$r.plan.json" >> "$RUNNER_TEMP/specs"
+            fi
             {
               printf '<details><summary><code>%s</code>: %s</summary>\n\n```hcl\n' "$r" "$status"
               grep -vE '^(.*: (Refreshing state|Reading)\.\.\.|.*: Read complete after)' "$log" || true
@@ -134,6 +147,24 @@ jobs:
 
           echo "changed=${changed# }" >> "$GITHUB_OUTPUT"
           echo "failed=${failed# }"   >> "$GITHUB_OUTPUT"
+
+      - name: change risk
+        id: risk
+        if: steps.plan.outputs.changed != ''
+        env:
+          OVERRIDE: ${{ contains(github.event.pull_request.labels.*.name, 'override-risk') }}
+        run: |
+          args=(--max-destroy 2)
+          [ "$OVERRIDE" = true ] && args+=(--override)
+          [ "$GITHUB_EVENT_NAME" = pull_request ] || args+=(--report-only)
+          read -ra specs < "$RUNNER_TEMP/specs"
+          set +e
+          python3 -I ci/risk-check.py "${args[@]}" "${specs[@]}" > "$RUNNER_TEMP/risk.md"
+          rc=$?
+          set -e
+          tee -a "$GITHUB_STEP_SUMMARY" < "$RUNNER_TEMP/risk.md"
+          cat "$RUNNER_TEMP/risk.md" "$RUNNER_TEMP/comment.md" > "$RUNNER_TEMP/c2" && mv "$RUNNER_TEMP/c2" "$RUNNER_TEMP/comment.md"
+          [ "$rc" = 0 ] && echo "blocked=false" >> "$GITHUB_OUTPUT" || echo "blocked=true" >> "$GITHUB_OUTPUT"
 
       - name: post plan to PR
         if: always() && github.event_name == 'pull_request'
@@ -157,6 +188,12 @@ jobs:
         if: steps.plan.outputs.failed != ''
         run: |
           echo "::error::plan failed for: ${{ steps.plan.outputs.failed }}"
+          exit 1
+
+      - name: fail on change risk
+        if: steps.risk.outputs.blocked == 'true'
+        run: |
+          echo "::error::change-risk gate blocked this plan; review it, then add the override-risk label to proceed"
           exit 1
 
   apply:
