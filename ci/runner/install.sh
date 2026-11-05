@@ -19,12 +19,21 @@ id "$U" &>/dev/null || useradd --system --create-home --home-dir "$H" --shell /u
 usermod -aG libvirt "$U"
 id -nG "$U" | grep -qw wheel && die "$U must not be in wheel"
 
-log "Least-privilege credentials (never .pgpass or SSH keys)"
+log "Least-privilege credentials (never .pgpass or nlucas's SSH keys)"
 install -d -o "$U" -g "$U" -m 0700 "$H/.config" "$H/.config/terraform" "$H/.terraform.d" "$H/.terraform.d/plugin-cache"
 for f in pg.env grafana.env technitium.env; do
   [[ -s $SRC_CFG/$f ]] || die "missing $SRC_CFG/$f"
   install -o "$U" -g "$U" -m 0600 "$SRC_CFG/$f" "$H/.config/terraform/$f"
 done
+
+log "Runner SSH identity (its own key for Ansible; VM host keys pinned, no trust-on-first-use)"
+install -d -o "$U" -g "$U" -m 0700 "$H/.ssh"
+[[ -f $H/.ssh/id_ed25519 ]] || sudo -u "$U" ssh-keygen -q -t ed25519 -N "" -C "$U@$(hostname -f)" -f "$H/.ssh/id_ed25519"
+[[ "$(cut -d' ' -f1,2 "$H/.ssh/id_ed25519.pub")" == "$(cut -d' ' -f1,2 "$HERE/../../keys/gh-runner.pub")" ]] \
+  || die "runner key does not match keys/gh-runner.pub; commit the new public key first"
+install -o "$U" -g "$U" -m 0644 "$HERE/known_hosts" "$H/.ssh/known_hosts"
+printf 'Host k3s-*\n  User nlucas\n  IdentityFile ~/.ssh/id_ed25519\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n' \
+  | install -o "$U" -g "$U" -m 0600 /dev/stdin "$H/.ssh/config"
 
 if [[ ! -x $D/run.sh ]]; then
   log "Download actions/runner (SHA-256 verified)"
@@ -64,5 +73,5 @@ log "Verify"
 sleep 8
 systemctl is-active gh-runner.service
 journalctl -u gh-runner.service -n 20 --no-pager | grep -E 'Connected to GitHub|Listening for Jobs' | tail -2 || true
-sudo -u "$U" virsh -c qemu:///system list --name | grep -c . | sed 's/^/libvirt domains visible to runner: /'
+sudo -u "$U" virsh -c qemu:///system list --all --name | grep -c . | sed 's/^/libvirt domains visible to runner: /'
 sudo -u "$U" test -r "/home/$SRC_USER/.pgpass" && die "runner can read .pgpass" || echo "isolation: runner cannot read /home/$SRC_USER"
