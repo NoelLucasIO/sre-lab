@@ -121,8 +121,8 @@ jobs:
             set -e
             case $rc in
               0) status="no changes" ;;
-              2) status="**changes**"; changed="$changed $r" ;;
-              *) status="**FAILED (exit $rc)**"; failed="$failed $r" ;;
+              2) status="<b>changes</b>"; changed="$changed $r" ;;
+              *) status="<b>FAILED (exit $rc)</b>"; failed="$failed $r" ;;
             esac
             {
               printf '<details><summary><code>%s</code>: %s</summary>\n\n```hcl\n' "$r" "$status"
