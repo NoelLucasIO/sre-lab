@@ -1,0 +1,195 @@
+# sre-lab: Terraform pipeline
+#   PR:          static checks (GitHub-hosted) -> plan per root (self-hosted) -> sticky PR comment
+#   push main:   static checks -> plan saved on runner disk -> apply (environment `lab`, required reviewer)
+# Plan files never leave the runner (no artifacts): this is a public repo and plan files hold raw values.
+name: terraform
+
+on:
+  pull_request:
+    paths:
+      - 'terraform/**'
+      - 'policy/**'
+      - '.tflint.hcl'
+      - '.checkov.yaml'
+      - '.github/workflows/terraform.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - 'policy/**'
+      - '.tflint.hcl'
+      - '.checkov.yaml'
+      - '.github/workflows/terraform.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: "1"
+  TF_INPUT: "0"
+  # Apply order matters: the image root before the VMs that use it.
+  ROOTS: "lab-base lab observability"
+
+jobs:
+  static:
+    name: static checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.65.0
+
+      - name: Install Checkov
+        run: pipx install checkov==3.4.3
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff terraform
+
+      - name: terraform validate
+        run: |
+          for r in $ROOTS; do
+            echo "::group::validate $r"
+            terraform -chdir="terraform/envs/$r" init -backend=false -input=false -no-color >/dev/null
+            terraform -chdir="terraform/envs/$r" validate -no-color
+            echo "::endgroup::"
+          done
+
+      - name: tflint
+        working-directory: terraform
+        env:
+          GITHUB_TOKEN: ${{ github.token }}   # avoids rate limits on plugin download
+        run: |
+          tflint --init --config "$PWD/../.tflint.hcl"
+          tflint --recursive --config "$PWD/../.tflint.hcl"
+
+      - name: checkov
+        run: checkov --config-file .checkov.yaml
+
+      - name: policy fixture tests
+        run: ./policy/test.sh
+
+  plan:
+    name: plan
+    needs: static
+    # Never run fork code on the LAN runner.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, fedora]
+    permissions:
+      contents: read
+      pull-requests: write
+    concurrency:
+      group: tf-plan-${{ github.ref }}
+      cancel-in-progress: true
+    outputs:
+      changed: ${{ steps.plan.outputs.changed }}
+      failed: ${{ steps.plan.outputs.failed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: terraform plan
+        id: plan
+        run: |
+          set -a
+          for f in pg grafana technitium; do . "$HOME/.config/terraform/$f.env"; done
+          set +a
+          export TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
+          mkdir -p "$TF_PLUGIN_CACHE_DIR" "$HOME/plans/$GITHUB_SHA"
+          chmod 700 "$HOME/plans" "$HOME/plans/$GITHUB_SHA"
+
+          out="$RUNNER_TEMP/comment.md"
+          printf '### Terraform plan for `%s`\n\n' "${GITHUB_SHA::7}" > "$out"
+          changed=""; failed=""
+
+          for r in $ROOTS; do
+            d="terraform/envs/$r"
+            log="$RUNNER_TEMP/$r.log"
+            set +e
+            {
+              terraform -chdir="$d" init -input=false -no-color >/dev/null &&
+              terraform -chdir="$d" plan -input=false -no-color -lock-timeout=120s \
+                -detailed-exitcode -out="$HOME/plans/$GITHUB_SHA/$r.tfplan"
+            } > "$log" 2>&1
+            rc=$?
+            set -e
+            case $rc in
+              0) status="no changes" ;;
+              2) status="<b>changes</b>"; changed="$changed $r" ;;
+              *) status="<b>FAILED (exit $rc)</b>"; failed="$failed $r" ;;
+            esac
+            {
+              printf '<details><summary><code>%s</code>: %s</summary>\n\n```hcl\n' "$r" "$status"
+              grep -vE '^(.*: (Refreshing state|Reading)\.\.\.|.*: Read complete after)' "$log" || true
+              printf '\n```\n</details>\n\n'
+            } >> "$out"
+            cat "$log"
+          done
+
+          echo "changed=${changed# }" >> "$GITHUB_OUTPUT"
+          echo "failed=${failed# }"   >> "$GITHUB_OUTPUT"
+
+      - name: post plan to PR
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = `${process.env.RUNNER_TEMP}/comment.md`;
+            const marker = '<!-- sre-lab-plan -->';
+            let body = fs.existsSync(path) ? fs.readFileSync(path, 'utf8') : '### Terraform plan did not run; see job log.\n';
+            if (body.length > 64000) body = body.slice(0, 64000) + '\n```\n</details>\n\n_Truncated; see job log._\n';
+            body = `${marker}\n${body}\n[Run log](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const prev = comments.find(c => c.user.type === 'Bot' && c.body.startsWith(marker));
+            if (prev) await github.rest.issues.updateComment({ owner, repo, comment_id: prev.id, body });
+            else await github.rest.issues.createComment({ owner, repo, issue_number, body });
+
+      - name: fail on plan error
+        if: steps.plan.outputs.failed != ''
+        run: |
+          echo "::error::plan failed for: ${{ steps.plan.outputs.failed }}"
+          exit 1
+
+  apply:
+    name: apply
+    needs: plan
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.plan.outputs.changed != ''
+    runs-on: [self-hosted, fedora]
+    environment: lab          # required reviewer = approval gate
+    concurrency:
+      group: tf-apply
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: apply saved plans
+        env:
+          CHANGED: ${{ needs.plan.outputs.changed }}
+        run: |
+          set -a
+          for f in pg grafana technitium; do . "$HOME/.config/terraform/$f.env"; done
+          set +a
+          export TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
+          dir="$HOME/plans/$GITHUB_SHA"
+          for r in $ROOTS; do
+            case " $CHANGED " in *" $r "*) ;; *) continue ;; esac
+            echo "::group::apply $r"
+            terraform -chdir="terraform/envs/$r" init -input=false -no-color >/dev/null
+            # A saved plan refuses to apply if state moved since it was made.
+            terraform -chdir="terraform/envs/$r" apply -input=false -no-color -lock-timeout=120s "$dir/$r.tfplan"
+            echo "::endgroup::"
+          done
+          rm -rf "$dir"
+
+      - name: prune stale plans
+        if: always()
+        run: find "$HOME/plans" -mindepth 1 -maxdepth 1 -type d -mtime +2 -exec rm -rf {} +

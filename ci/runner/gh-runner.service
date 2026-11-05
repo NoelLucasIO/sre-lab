@@ -12,7 +12,7 @@ SupplementaryGroups=libvirt
 WorkingDirectory=/var/lib/gh-runner/actions-runner
 ExecStart=/var/lib/gh-runner/actions-runner/run.sh
 Environment=HOME=/var/lib/gh-runner TF_IN_AUTOMATION=1 TF_PLUGIN_CACHE_DIR=/var/lib/gh-runner/.terraform.d/plugin-cache
-KillMode=process
+KillMode=mixed
 KillSignal=SIGTERM
 TimeoutStopSec=5min
 Restart=always
@@ -21,11 +21,12 @@ RestartSec=10
 # Hardening: the runner executes repo code, so assume a job can be hostile.
 NoNewPrivileges=yes
 CapabilityBoundingSet=
-RestrictSUIDSGID=yes
 ProtectSystem=strict
 ReadWritePaths=/var/lib/gh-runner
 ProtectHome=yes
-PrivateTmp=yes
+StateDirectory=gh-runner/tmp
+StateDirectoryMode=0700
+BindPaths=/var/lib/gh-runner/tmp:/tmp
 PrivateDevices=yes
 ProtectKernelTunables=yes
 ProtectKernelModules=yes
