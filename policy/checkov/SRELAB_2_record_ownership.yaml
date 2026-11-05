@@ -1,0 +1,11 @@
+metadata:
+  id: "CKV2_SRELAB_2"
+  name: "DNS records must carry a managed-by=terraform comment"
+  category: "CONVENTION"
+  severity: "LOW"
+definition:
+  cond_type: "attribute"
+  resource_types: ["technitium_record"]
+  attribute: "comments"
+  operator: "contains"
+  value: "managed-by=terraform"

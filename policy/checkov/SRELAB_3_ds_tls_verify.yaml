@@ -1,0 +1,12 @@
+metadata:
+  id: "CKV2_SRELAB_3"
+  name: "Grafana data sources must not skip TLS verification"
+  category: "ENCRYPTION"
+  severity: "HIGH"
+definition:
+  # Checkov renders jsonencode() into an object, so match the key, not a substring.
+  cond_type: "attribute"
+  resource_types: ["grafana_data_source"]
+  attribute: "json_data_encoded.tlsSkipVerify"
+  operator: "not_equals"
+  value: true

@@ -1,0 +1,11 @@
+metadata:
+  id: "CKV2_SRELAB_1"
+  name: "VM consoles (VNC) must listen on loopback only"
+  category: "NETWORKING"
+  severity: "HIGH"
+definition:
+  cond_type: "attribute"
+  resource_types: ["libvirt_domain"]
+  attribute: "devices.graphics.*.vnc.listen"
+  operator: "equals"
+  value: "127.0.0.1"

@@ -1,0 +1,13 @@
+# Run from repo root: `checkov --config-file .checkov.yaml`
+# Built-in Checkov policies cover the big clouds, not libvirt/Grafana/Technitium: on this repo they
+# evaluate 0 checks. The enforcement lives in policy/checkov (proven by policy/test.sh).
+directory:
+  - terraform
+framework:
+  - terraform
+external-checks-dir:
+  - policy/checkov
+check:
+  - CKV2_SRELAB_*
+compact: true
+quiet: true

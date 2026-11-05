@@ -29,11 +29,13 @@ variable "reverse_zone" {
 }
 
 variable "create_ptr" {
-  type    = bool
-  default = true
+  description = "Also create the matching PTR record in reverse_zone."
+  type        = bool
+  default     = true
 }
 
 variable "ttl" {
-  type    = number
-  default = 300
+  description = "TTL in seconds for both records."
+  type        = number
+  default     = 300
 }

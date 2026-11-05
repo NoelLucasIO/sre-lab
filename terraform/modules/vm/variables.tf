@@ -23,13 +23,15 @@ variable "tags" {
 }
 
 variable "vcpu" {
-  type    = number
-  default = 2
+  description = "Virtual CPU count."
+  type        = number
+  default     = 2
 }
 
 variable "memory_mib" {
-  type    = number
-  default = 4096
+  description = "Memory in MiB."
+  type        = number
+  default     = 4096
 }
 
 variable "disk_gib" {
@@ -65,16 +67,19 @@ variable "ipv4_cidr" {
 }
 
 variable "gateway" {
-  type = string
+  description = "IPv4 default gateway."
+  type        = string
 }
 
 variable "dns_servers" {
-  type = list(string)
+  description = "DNS resolvers written into the guest network config."
+  type        = list(string)
 }
 
 variable "admin_user" {
-  type    = string
-  default = "nlucas"
+  description = "Login user created by cloud-init (key-only, passwordless sudo)."
+  type        = string
+  default     = "nlucas"
 }
 
 variable "ssh_authorized_keys" {
