@@ -9,3 +9,7 @@ collections:
     version: "2.2.2"
   - name: community.general
     version: "14.0.0"
+  # Used by k3s.orchestration (ansible.utils.ipwrap in the agent install env) but missing from
+  # its galaxy.yml dependencies; without it the agent install fails at template render time.
+  - name: ansible.utils
+    version: "6.1.1"

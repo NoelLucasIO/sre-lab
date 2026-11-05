@@ -47,6 +47,25 @@ jobs:
           ansible-playbook site.yml --syntax-check
           ansible-playbook site.yml --list-tasks > /dev/null
 
+      # --syntax-check does not resolve filters (they bind at template render time), so an
+      # undeclared collection dependency only failed mid-converge. Resolve every FQCN the roles use.
+      - name: Every module, filter and test the roles reference resolves
+        run: |
+          roles="$(ansible-galaxy collection list k3s.orchestration --format json \
+                   | python3 -c 'import sys,json; d=json.load(sys.stdin); print(next(iter(d)))')/k3s/orchestration/roles"
+          grep -rhoE '(ansible\.(utils|posix|builtin)|community\.general)\.[a-z_]+' "$roles" | sort -u > refs.txt
+          missing=0
+          while read -r ref; do
+            # Exit codes are not enough: `ansible-doc -t module <missing>` warns and returns 0.
+            # Require real documentation in the JSON output instead.
+            for t in module filter test; do
+              ansible-doc -t "$t" --json "$ref" 2>/dev/null \
+                | python3 -c 'import sys,json; sys.exit(0 if json.load(sys.stdin) else 1)' 2>/dev/null && continue 2
+            done
+            echo "::error::unresolved: $ref"; missing=1
+          done < refs.txt
+          echo "$(wc -l < refs.txt) references checked"; exit "$missing"
+
   converge:
     name: converge k3s
     needs: syntax
