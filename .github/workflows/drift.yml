@@ -1,0 +1,112 @@
+# sre-lab: nightly drift detection
+# Plans every root against main with -detailed-exitcode (no saved plan, nothing applied).
+#   drift  -> opens (or updates) one issue labeled `drift` with the plan output
+#   clean  -> closes that issue with a comment
+#   error  -> the run fails, and the issue records which root failed
+name: drift
+
+on:
+  schedule:
+    - cron: "43 6 * * *"   # 01:43 EST / 02:43 EDT nightly (UTC); off the hour to dodge queue spikes
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: tf-drift
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: "1"
+  TF_INPUT: "0"
+  ROOTS: "lab-base lab observability"
+
+jobs:
+  drift:
+    name: drift check
+    runs-on: [self-hosted, fedora]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: plan every root
+        id: plan
+        run: |
+          set -a
+          for f in pg grafana technitium; do . "$HOME/.config/terraform/$f.env"; done
+          set +a
+          export TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
+
+          out="$RUNNER_TEMP/drift.md"
+          printf '### Drift check at `%s` (%s UTC)\n\n' "${GITHUB_SHA::7}" "$(date -u '+%F %H:%M')" > "$out"
+          drifted=""; failed=""
+
+          for r in $ROOTS; do
+            d="terraform/envs/$r"
+            log="$RUNNER_TEMP/$r.log"
+            set +e
+            {
+              terraform -chdir="$d" init -input=false -no-color >/dev/null &&
+              terraform -chdir="$d" plan -input=false -no-color -lock-timeout=300s -detailed-exitcode
+            } > "$log" 2>&1
+            rc=$?
+            set -e
+            case $rc in
+              0) status="in sync" ;;
+              2) status="<b>DRIFT</b>"; drifted="$drifted $r" ;;
+              *) status="<b>FAILED (exit $rc)</b>"; failed="$failed $r" ;;
+            esac
+            {
+              printf '<details><summary><code>%s</code>: %s</summary>\n\n```hcl\n' "$r" "$status"
+              grep -vE '^(.*: (Refreshing state|Reading)\.\.\.|.*: Read complete after)' "$log" || true
+              printf '\n```\n</details>\n\n'
+            } >> "$out"
+            cat "$log"
+          done
+
+          tee -a "$GITHUB_STEP_SUMMARY" < "$out" >/dev/null
+          echo "drifted=${drifted# }" >> "$GITHUB_OUTPUT"
+          echo "failed=${failed# }"   >> "$GITHUB_OUTPUT"
+
+      - name: open, update or close the drift issue
+        if: always() && steps.plan.outcome != 'skipped'
+        uses: actions/github-script@v7
+        env:
+          DRIFTED: ${{ steps.plan.outputs.drifted }}
+          FAILED: ${{ steps.plan.outputs.failed }}
+        with:
+          script: |
+            const fs = require('fs');
+            const p = `${process.env.RUNNER_TEMP}/drift.md`;
+            const report = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '### Drift check produced no report; see the run log.\n';
+            const { DRIFTED: drifted, FAILED: failed } = process.env;
+            const { owner, repo } = context.repo;
+            const run = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const open = (await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'open', labels: 'drift' }))
+              .filter(i => !i.pull_request);
+            const existing = open[0];
+            const noReport = !fs.existsSync(p);
+            if (drifted || failed || noReport) {
+              const parts = [drifted && `drift in ${drifted}`, failed && `plan failed in ${failed}`, noReport && 'no report'].filter(Boolean);
+              const title = `Drift check: ${parts.join('; ')}`;
+              let body = report.length > 63000 ? report.slice(0, 63000) + '\n```\n</details>\n\n_Truncated; see the run log._\n' : report;
+              body += `\n[Run log](${run})`;
+              if (existing) {
+                await github.rest.issues.update({ owner, repo, issue_number: existing.number, title, body });
+                await github.rest.issues.createComment({ owner, repo, issue_number: existing.number, body: `Still not in sync: ${run}` });
+              } else {
+                await github.rest.issues.create({ owner, repo, title, body, labels: ['drift'] });
+              }
+            } else if (existing) {
+              await github.rest.issues.createComment({ owner, repo, issue_number: existing.number, body: `All roots in sync: ${run}. Closing.` });
+              await github.rest.issues.update({ owner, repo, issue_number: existing.number, state: 'closed', state_reason: 'completed' });
+            }
+
+      - name: fail on plan error
+        if: steps.plan.outputs.failed != ''
+        run: |
+          echo "::error::drift check could not plan: ${{ steps.plan.outputs.failed }}"
+          exit 1
