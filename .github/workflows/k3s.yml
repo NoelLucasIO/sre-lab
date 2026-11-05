@@ -1,0 +1,99 @@
+# sre-lab: k3s on the envs/lab VMs (Terraform provisions, Ansible configures)
+#   PR:         syntax check of the pinned playbook on GitHub-hosted (no LAN access)
+#   push main:  converge on fedora behind the `lab` approval, inventory from `terraform output`,
+#               then verify every node is Ready
+name: k3s
+
+on:
+  pull_request:
+    paths:
+      - 'ansible/**'
+      - '.github/workflows/k3s.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ansible/**'
+      - '.github/workflows/k3s.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ANSIBLE_FORCE_COLOR: "1"
+  EXPECTED_NODES: "3"
+
+jobs:
+  syntax:
+    name: ansible syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"   # matches fedora's controller Python
+
+      - name: Install pinned Ansible and collections
+        run: |
+          pip install -q -r ansible/requirements.txt
+          ansible-galaxy collection install -r ansible/requirements.yml
+
+      - name: Syntax check against the sample Terraform output
+        working-directory: ansible
+        run: |
+          python3 -I inventory/tf-inventory.py < inventory/tf-output.sample.json > inventory/hosts.json
+          ansible-inventory --graph
+          ansible-playbook site.yml --syntax-check
+          ansible-playbook site.yml --list-tasks > /dev/null
+
+  converge:
+    name: converge k3s
+    needs: syntax
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, fedora]
+    environment: lab          # required reviewer = approval gate
+    concurrency:
+      group: tf-apply         # shared with terraform apply: one change to the lab at a time
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pinned Ansible venv (cached in the runner home, keyed by the pins)
+        run: |
+          h=$(cat ansible/requirements.txt ansible/requirements.yml | sha256sum | cut -c1-12)
+          V="$HOME/.venvs/ansible-$h"
+          if [ ! -x "$V/bin/ansible-playbook" ]; then
+            rm -rf "$V"
+            python3 -m venv "$V"
+            "$V/bin/pip" install -q --disable-pip-version-check -r ansible/requirements.txt
+            ANSIBLE_COLLECTIONS_PATH="$V/collections" "$V/bin/ansible-galaxy" collection install \
+              -r ansible/requirements.yml -p "$V/collections"
+          fi
+          echo "$V/bin" >> "$GITHUB_PATH"
+          echo "ANSIBLE_COLLECTIONS_PATH=$V/collections" >> "$GITHUB_ENV"
+
+      - name: Inventory from Terraform (envs/lab output k3s_nodes)
+        run: |
+          set -a; . "$HOME/.config/terraform/pg.env"; set +a
+          export TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
+          terraform -chdir=terraform/envs/lab init -input=false -no-color >/dev/null
+          terraform -chdir=terraform/envs/lab output -json k3s_nodes \
+            | python3 -I ansible/inventory/tf-inventory.py > ansible/inventory/hosts.json
+          cd ansible && ansible-inventory --graph
+
+      - name: Converge
+        working-directory: ansible
+        run: ansible-playbook site.yml
+
+      - name: Verify every node is Ready
+        run: |
+          ready=0
+          for _ in $(seq 1 30); do
+            ready=$( { ssh -n k3s-server-1.noellucas.io sudo k3s kubectl get nodes --no-headers 2>/dev/null || true; } \
+                    | awk '$2 == "Ready"' | wc -l)
+            [ "$ready" -ge "$EXPECTED_NODES" ] && break
+            sleep 10
+          done
+          ssh -n k3s-server-1.noellucas.io sudo k3s kubectl get nodes -o wide | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$ready" -ge "$EXPECTED_NODES" ] || { echo "::error::only $ready of $EXPECTED_NODES nodes Ready"; exit 1; }

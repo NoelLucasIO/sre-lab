@@ -1,0 +1,2 @@
+# Generated from `terraform output -json k3s_nodes` at run time; never committed.
+inventory/hosts.json

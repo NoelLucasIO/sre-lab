@@ -1,0 +1,4 @@
+# Controller (runner) Python deps. ansible-core 2.21: controller Python 3.12-3.14 (fedora: 3.14),
+# target Python 3.9-3.14 (Rocky 9: 3.9). netaddr is required by k3s.orchestration (ansible.utils.ipwrap).
+ansible-core==2.21.6
+netaddr==1.3.0

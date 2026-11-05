@@ -1,0 +1,5 @@
+{
+  "k3s-agent-1": {"fqdn": "k3s-agent-1.noellucas.io", "ip": "192.168.2.41", "mac": "52:54:00:87:f0:de"},
+  "k3s-agent-2": {"fqdn": "k3s-agent-2.noellucas.io", "ip": "192.168.2.42", "mac": "52:54:00:6b:8e:84"},
+  "k3s-server-1": {"fqdn": "k3s-server-1.noellucas.io", "ip": "192.168.2.40", "mac": "52:54:00:4c:de:92"}
+}

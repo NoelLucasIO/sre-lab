@@ -1,0 +1,7 @@
+---
+# Shared vars for every k3s node. Hosts and groups come from Terraform (inventory/tf-inventory.py).
+ansible_user: nlucas
+k3s_version: v1.37.2+k3s1          # update.k3s.io stable channel, 2026-11-05
+api_endpoint: k3s-server-1.noellucas.io
+# No `token`: the first server generates one and the agents read it from there (k3s.orchestration 1.2.2).
+user_kubectl: true

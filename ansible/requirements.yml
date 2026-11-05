@@ -1,0 +1,11 @@
+---
+collections:
+  # Official k3s collection, pinned to a release tag (not on Galaxy).
+  - name: https://github.com/k3s-io/k3s-ansible.git
+    type: git
+    version: "1.2.2"
+  # Its dependencies, pinned exactly.
+  - name: ansible.posix
+    version: "2.2.2"
+  - name: community.general
+    version: "14.0.0"
