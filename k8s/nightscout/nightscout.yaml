@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: nightscout
-          image: docker.io/nightscout/cgm-remote-monitor:15.0.9@sha256:28ec928271a293745724f934df2ed9f2cddaf66442de734c2780662171b611a2
+          image: docker.io/nightscout/cgm-remote-monitor:15.0.9@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
           ports:
             - containerPort: 1337
               name: http
