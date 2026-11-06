@@ -1,0 +1,117 @@
+# sre-lab: Nightscout copy on k3s, deployed with an automatic rollback (ADR 0007)
+#   PR:         render + image-pinning policy + script tests (GitHub-hosted);
+#               server-side dry-run and diff against the cluster (fedora, same-repo PRs only)
+#   push main:  behind the `lab` approval, apply -> rollout status -> health check
+#               (API answers + newest CGM reading < 10 min). On failure: `rollout undo` of every
+#               workload the change touched, verify the restored version, open an issue, fail.
+name: nightscout
+
+on:
+  pull_request:
+    paths:
+      - 'k8s/nightscout/**'
+      - 'ci/nightscout/**'
+      - 'ci/install-kubectl.sh'
+      - '.github/workflows/nightscout.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'k8s/nightscout/**'
+      - 'ci/nightscout/**'
+      - 'ci/install-kubectl.sh'
+      - '.github/workflows/nightscout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  KUBECTL_VERSION: v1.37.2
+  KUBECTL_SHA256: c04487523e7aa7d1493f7808174c899db93d7a9cf57531420cd76b9bd415f8f4
+
+jobs:
+  validate:
+    name: render and policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pinned kubectl
+        run: ci/install-kubectl.sh "$RUNNER_TEMP/kubectl"
+
+      - name: Render the kustomization
+        run: kubectl kustomize k8s/nightscout > "$RUNNER_TEMP/rendered.yaml" && wc -l "$RUNNER_TEMP/rendered.yaml"
+
+      - name: Every image pinned by digest
+        run: ci/nightscout/check-images.sh < "$RUNNER_TEMP/rendered.yaml"
+
+      - name: Deploy and health-check script tests (incl. every failure path)
+        run: ci/nightscout/test.sh
+
+  preview:
+    name: dry-run and diff
+    needs: validate
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, fedora]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pinned kubectl
+        run: ci/install-kubectl.sh "$HOME/.local/kubectl"
+
+      - name: Server-side dry-run (schema, admission, Pod Security) and diff
+        run: |
+          export KUBECONFIG="$HOME/.kube/nightscout-deployer.yaml"
+          kubectl apply -k k8s/nightscout --dry-run=server
+          set +e; kubectl diff -k k8s/nightscout > "$RUNNER_TEMP/diff.txt"; rc=$?; set -e
+          [ "$rc" -le 1 ] || { cat "$RUNNER_TEMP/diff.txt"; exit "$rc"; }
+          { echo "### kubectl diff"; echo; echo '```diff'; cat "$RUNNER_TEMP/diff.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          echo "diff: $(grep -c '^[+-][^+-]' "$RUNNER_TEMP/diff.txt" || true) changed lines (see job summary)"
+
+  deploy:
+    name: deploy with rollback
+    needs: validate
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, fedora]
+    environment: lab          # required reviewer = approval gate
+    concurrency:
+      group: tf-apply         # one change to the lab at a time, shared with Terraform and Ansible
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pinned kubectl
+        run: ci/install-kubectl.sh "$HOME/.local/kubectl"
+
+      - name: Deploy, verify, roll back on failure
+        id: deploy
+        run: |
+          export KUBECONFIG="$HOME/.kube/nightscout-deployer.yaml"
+          ci/nightscout/deploy.sh
+        env:
+          REPORT: ${{ runner.temp }}/report.md
+
+      - name: Report
+        if: always() && steps.deploy.outcome != 'skipped'
+        run: '[ -f "$RUNNER_TEMP/report.md" ] && cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY" || true'
+
+      - name: Open an issue for the failed deploy
+        if: failure() && steps.deploy.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const p = `${process.env.RUNNER_TEMP}/report.md`;
+            const report = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : 'No report was written; see the run log.';
+            const { owner, repo } = context.repo;
+            const run = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const sha = context.sha.slice(0, 7);
+            await github.rest.issues.create({
+              owner, repo,
+              title: `Nightscout deploy of ${sha} failed`,
+              body: `${report}\n\nCommit: ${context.sha}\n[Run log](${run})`,
+              labels: ['deploy-failure'],
+            });

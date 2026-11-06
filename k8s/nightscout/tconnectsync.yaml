@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tconnectsync
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 180
+  # One poller at a time against Tandem Source.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: tconnectsync
+  template:
+    metadata:
+      labels:
+        app: tconnectsync
+    spec:
+      containers:
+        - name: tconnectsync
+          image: ghcr.io/jwoglom/tconnectsync/tconnectsync:v3.0.3@sha256:5d18cbfb171878f7ffb49911da9cbb6dabc2bdeb5063d43cfe88949bef013b96
+          args: ["--auto-update"]
+          envFrom:
+            - configMapRef:
+                name: tconnectsync-config
+          env:
+            - name: TCONNECT_EMAIL
+              valueFrom:
+                secretKeyRef: {name: nightscout-secrets, key: TCONNECT_EMAIL}
+            - name: TCONNECT_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: nightscout-secrets, key: TCONNECT_PASSWORD}
+            - name: NS_SECRET
+              valueFrom:
+                secretKeyRef: {name: nightscout-secrets, key: API_SECRET}
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
