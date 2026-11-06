@@ -8,11 +8,13 @@ on:
   pull_request:
     paths:
       - 'ansible/**'
+      - 'ci/install-kubectl.sh'
       - '.github/workflows/k3s.yml'
   push:
     branches: [main]
     paths:
       - 'ansible/**'
+      - 'ci/install-kubectl.sh'
       - '.github/workflows/k3s.yml'
   workflow_dispatch:
 
@@ -22,6 +24,8 @@ permissions:
 env:
   ANSIBLE_FORCE_COLOR: "1"
   EXPECTED_NODES: "3"
+  KUBECTL_VERSION: v1.37.2
+  KUBECTL_SHA256: c04487523e7aa7d1493f7808174c899db93d7a9cf57531420cd76b9bd415f8f4
 
 jobs:
   syntax:
@@ -116,3 +120,26 @@ jobs:
           done
           ssh -n k3s-server-1.noellucas.io sudo k3s kubectl get nodes -o wide | tee -a "$GITHUB_STEP_SUMMARY"
           [ "$ready" -ge "$EXPECTED_NODES" ] || { echo "::error::only $ready of $EXPECTED_NODES nodes Ready"; exit 1; }
+
+      - name: Pinned kubectl
+        run: ci/install-kubectl.sh "$HOME/.local/kubectl"
+
+      # The deployer must manage nightscout workloads and nothing else: prove both directions.
+      - name: Verify the deployer's access is namespace-scoped
+        run: |
+          export KUBECONFIG="$HOME/.kube/nightscout-deployer.yaml"
+          fail=0
+          expect(){ got=$(kubectl auth can-i "$@" 2>/dev/null || true)
+                    if [ "$got" = "$want" ]; then echo "ok   can-i $* -> $got"; else echo "::error::can-i $* -> $got, want $want"; fail=1; fi; }
+          want=yes
+          expect create deployments -n nightscout
+          expect patch statefulsets -n nightscout
+          expect get secret/nightscout-secrets -n nightscout
+          want=no
+          expect get secrets -n nightscout
+          expect get secret/deployer-token -n nightscout
+          expect create deployments -n kube-system
+          expect get pods -n kube-system
+          expect create namespaces
+          expect create rolebindings -n nightscout
+          exit "$fail"
