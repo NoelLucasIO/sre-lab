@@ -6,19 +6,23 @@ is a Nightscout + tconnectsync stack, so every SLO, alert and drill measures rea
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | Terraform modules, remote state with enforced locking, policy-as-code | **Done** (2026-11-05) |
-| 2 | CI/CD: plan on PR, approval gate, change-risk checks, automatic rollback | Planned |
+| 2 | CI/CD: plan on PR, approval gate, change-risk checks, automatic rollback | **Done** (2026-11-06) |
 | 3 | SLIs/SLOs, multi-window burn-rate alerts, on-call routing, runbooks | Planned |
 | 4 | AWS via Terraform, offsite backups, timed DR drill, game day, postmortem | Planned |
 
 ## Layout
 
 ```
-docs/decisions/   Architecture decision records
-garage/           Garage S3 (rootless Podman quadlet), backup target
-keys/             Public SSH keys baked into VMs by cloud-init
-policy/           Custom Checkov policies + their self-test
-postgres/         Terraform state database bootstrap
-terraform/envs/   Root modules: lab (k3s VMs + DNS), lab-base (cloud images), observability (Grafana), prod-lab
+.github/workflows/    terraform (plan/gate/apply) · drift (nightly) · k3s (Ansible) · nightscout (deploy + rollback)
+ansible/              k3s via the pinned k3s.orchestration collection; namespace-scoped deployer for the app pipeline
+ci/                   change-risk gate, self-hosted runner install, Nightscout deploy/health/rollback scripts + tests
+docs/decisions/       Architecture decision records
+garage/               Garage S3 (rootless Podman quadlet), backup target
+k8s/nightscout/       Nightscout, MongoDB and tconnectsync on k3s (kustomize, digest-pinned images)
+keys/                 Public SSH keys baked into VMs by cloud-init
+policy/               Custom Checkov policies + their self-test
+postgres/             Terraform state database bootstrap
+terraform/envs/       Root modules: lab (k3s VMs + DNS), lab-base (cloud images), observability (Grafana), prod-lab
 terraform/lock-test/  Proof that state locking excludes a second writer
 ```
 
@@ -34,6 +38,35 @@ terraform/lock-test/  Proof that state locking excludes a second writer
   and cloud-init on all 3 nodes. **70 s wall clock**, last node ready 59 s after apply. DNS
   resolves, drift `plan` reports no changes, Grafana untouched.
 
+## Phase 2 evidence
+
+- **Change control as code:** every infrastructure change goes PR → `terraform plan` posted as a
+  comment → merge → apply of that exact saved plan, only after approval in the `lab` environment
+  (required reviewer, no admin bypass). Plans never leave the runner (public repo).
+- **Change-risk gate:** a plan that destroys or replaces more than 2 resources, or touches anything
+  tagged `critical`, fails the PR unless it carries `override-risk`. Proven on
+  [PR #3](https://github.com/NoelLucasIO/sre-lab/pull/3): blocked a 9-replacement plan, then
+  overridden and approved on record.
+- **Drift detection:** nightly plan of every root; drift opens an issue, a return to sync closes it.
+  Proven with an out-of-band Grafana change and its revert.
+- **Terraform provisions, Ansible configures:** the k3s inventory is generated from
+  `terraform output`; the cluster converges from CI and is verified Ready. A PR check resolves every
+  module and filter the collection uses, after an undeclared upstream dependency broke a converge (ADR 0006).
+- **Least privilege for the app pipeline:** a deployer account scoped to one namespace, proven in CI
+  with `kubectl auth can-i` in both directions (3 allowed, 6 denied).
+- **Automatic rollback, tested with a broken release:** Nightscout deploys behind approval, then a
+  health check requires the authenticated API to answer and the newest CGM reading to be under
+  10 minutes old. A release pointing at a nonexistent image digest passed every static gate
+  (render, digest policy, server-side dry-run); after approval, with no further input, the rollout
+  failed, `rollout undo` restored the previous version, its health was re-verified, and
+  [issue #12](https://github.com/NoelLucasIO/sre-lab/issues/12) was opened. The old pod served
+  throughout (`maxUnavailable: 0`). Reverted on `main` in
+  [PR #13](https://github.com/NoelLucasIO/sre-lab/pull/13).
+- **Tested pipeline logic:** the deploy and health-check scripts run against a fake `kubectl` and
+  `curl` in 19 cases covering every failure path; 5 deliberately planted bugs were all caught.
+- **Hardened self-hosted runner:** a locked-down system user under a sandboxed systemd unit; six
+  runner and workflow failures diagnosed by evidence and bisection, each recorded in ADR 0005.
+
 ## Decisions
 
 - [ADR 0001: Terraform state backend](docs/decisions/0001-terraform-state-backend.md): tested the
@@ -43,8 +76,15 @@ terraform/lock-test/  Proof that state locking excludes a second writer
   policies evaluated 0 checks here; custom policies are tested against violating fixtures.
 - [ADR 0004: Observability config gets its own state](docs/decisions/0004-state-split.md): VM rebuilds
   can no longer reach the shared Prometheus data source.
+- [ADR 0005: Self-hosted runner trust boundary](docs/decisions/0005-runner-trust-boundary.md): what
+  the runner can and cannot reach, and the failures that shaped its unit.
+- [ADR 0006: Configuration management](docs/decisions/0006-config-management.md): Ansible only from
+  CI, inventory from Terraform, versions chosen from the support matrix.
+- [ADR 0007: App delivery and rollback](docs/decisions/0007-app-delivery-and-rollback.md): a full
+  Nightscout copy on k3s, digest pinning, scoped deploy access, and the rollback test result.
 
 ## Host
 
 Fedora Server 44, rootless Podman quadlets with `Network=host`. Storage: `/990` NVMe xfs for
-metadata and databases, `/data` 2×24 TB MD RAID1 xfs for bulk data.
+metadata and databases, `/data` 2×24 TB MD RAID1 xfs for bulk data. k3s v1.37 on three Rocky 9
+VMs (libvirt) built by `terraform/envs/lab`.
