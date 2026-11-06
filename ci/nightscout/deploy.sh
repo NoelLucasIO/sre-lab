@@ -20,7 +20,7 @@ diagnose(){
   { echo; echo '<details><summary>pods and recent events</summary>'; echo; echo '```'
     k get pods -o wide 2>&1 || true
     k get events --sort-by=.lastTimestamp 2>&1 | tail -15 || true
-    echo '```'; echo '</details>'; } >> "$REPORT"
+    echo '```'; echo '</details>'; echo; } >> "$REPORT"   # blank line: markdown after </details> needs it
 }
 
 declare -A before

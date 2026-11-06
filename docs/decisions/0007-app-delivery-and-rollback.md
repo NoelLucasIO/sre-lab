@@ -23,3 +23,8 @@ Phase 2 needs an application pipeline that can undo a bad release with no one at
 - The freshness check couples deploy health to upstream data: if the sensor or phone stops uploading, a good release fails its check. `deploy.sh` exits 2 when the restored version is also unhealthy, which points at upstream rather than the change. Phase 3 can compare against the live instance to tell the two apart.
 - Single replicas on `local-path` storage: MongoDB is pinned to one node. Acceptable for a copy; Phase 4's DR drill exercises restore.
 - Not yet: k3s secrets encryption at rest (`secrets-encryption`), progressive delivery (canary), a DNS record for `ns-k3s` (the health check targets Traefik with `--resolve`).
+
+## Result, 2026-11-06
+
+- First deploy: MongoDB 7.0.45, Nightscout 15.0.9 and tconnectsync v3.0.3 rolled out; health check passed with a live CGM reading.
+- Deliberately broken release: same tag, nonexistent digest. It passed every static gate (render, digest policy, server-side dry-run), which is the point: only the post-deploy check can catch it. After approval, with no further input: the new pod could not pull its image, the old pod kept serving (`maxUnavailable: 0`), the rollout hit its 180 s progress deadline, `deploy.sh` ran `rollout undo deployment/nightscout`, the restored version passed the health check, and issue #12 (`deploy-failure`) was opened. The revert PR then brought `main` back in line with the cluster.
