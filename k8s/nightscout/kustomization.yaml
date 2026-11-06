@@ -1,0 +1,36 @@
+# Nightscout copy on k3s (ADR 0007). Runs alongside the live Podman pod on fedora with its own
+# MongoDB and its own API secret; reads the same Dexcom Share and Tandem Source accounts.
+# The namespace, deployer RBAC (ansible/cluster-access.yml) and the nightscout-secrets Secret
+# (ci/nightscout/seed-secret.sh) are created outside this kustomization.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: nightscout
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: nightscout
+resources:
+  - mongo.yaml
+  - nightscout.yaml
+  - tconnectsync.yaml
+# Hash-suffixed ConfigMaps: a config change rolls the pods, and `rollout undo` restores the
+# previous config along with the previous image.
+configMapGenerator:
+  - name: nightscout-config
+    literals:
+      - NODE_ENV=production
+      - TZ=America/New_York
+      - PORT=1337
+      - MONGODB_URI=mongodb://mongo:27017/nightscout
+      - BASE_URL=http://ns-k3s.noellucas.io
+      - DISPLAY_UNITS=mg/dl
+      - INSECURE_USE_HTTP=true
+      - SECURE_HSTS_HEADER=false
+      - AUTH_DEFAULT_ROLES=denied
+      - ENABLE=bridge careportal basal iob cob bwp cage sage iage bage pump openaps loop rawbg dbsize
+      - BRIDGE_SERVER=US
+      - DEXCOM_BRIDGE_USE_LEGACY=true
+  - name: tconnectsync-config
+    literals:
+      - NS_URL=http://nightscout:1337/
+      - TIMEZONE_NAME=America/New_York
+      - TCONNECT_REGION=US

@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nightscout
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  # A rollout that makes no progress for 3 minutes (e.g. an image that cannot be pulled) is
+  # marked failed, which ends `kubectl rollout status` and triggers the automatic rollback.
+  progressDeadlineSeconds: 180
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0   # the old pod keeps serving until the new one is Ready
+  selector:
+    matchLabels:
+      app: nightscout
+  template:
+    metadata:
+      labels:
+        app: nightscout
+    spec:
+      containers:
+        - name: nightscout
+          image: docker.io/nightscout/cgm-remote-monitor:15.0.9@sha256:28ec928271a293745724f934df2ed9f2cddaf66442de734c2780662171b611a2
+          ports:
+            - containerPort: 1337
+              name: http
+          envFrom:
+            - configMapRef:
+                name: nightscout-config
+          env:
+            - name: API_SECRET
+              valueFrom:
+                secretKeyRef: {name: nightscout-secrets, key: API_SECRET}
+            - name: BRIDGE_USER_NAME
+              valueFrom:
+                secretKeyRef: {name: nightscout-secrets, key: BRIDGE_USER_NAME}
+            - name: BRIDGE_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: nightscout-secrets, key: BRIDGE_PASSWORD}
+          # `/` answers 200 without auth (AUTH_DEFAULT_ROLES=denied gates the API, not the page).
+          readinessProbe:
+            httpGet: {path: /, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: {path: /, port: http}
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nightscout
+spec:
+  selector:
+    app: nightscout
+  ports:
+    - name: http
+      port: 1337
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nightscout
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: ns-k3s.noellucas.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nightscout
+                port:
+                  name: http
