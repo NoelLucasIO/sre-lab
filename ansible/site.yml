@@ -2,3 +2,6 @@
 # Configure the k3s cluster on the VMs that envs/lab built.
 - name: Install k3s (k3s.orchestration)
   ansible.builtin.import_playbook: k3s.orchestration.site
+
+- name: Cluster access for the app pipeline
+  ansible.builtin.import_playbook: cluster-access.yml

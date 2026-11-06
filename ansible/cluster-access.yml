@@ -1,0 +1,73 @@
+---
+# Platform side of the app pipeline (ADR 0007): the nightscout namespace, a deployer
+# ServiceAccount that can only manage workloads in that namespace, and a kubeconfig for it on
+# the controller (the fedora runner, as gh-runner). The app pipeline never holds cluster-admin.
+- name: Namespace and namespace-scoped deployer for the nightscout pipeline
+  hosts: server
+  become: true
+  gather_facts: false
+  vars:
+    app_namespace: nightscout
+    deployer_kubeconfig: "{{ lookup('ansible.builtin.env', 'HOME') }}/.kube/nightscout-deployer.yaml"
+  tasks:
+    - name: Apply namespace, ServiceAccount, Role, RoleBinding and token Secret
+      ansible.builtin.command:
+        cmd: k3s kubectl apply -f -
+        stdin: "{{ lookup('ansible.builtin.template', 'templates/deployer-rbac.yaml.j2') }}"
+      register: rbac
+      changed_when: "' created' in rbac.stdout or ' configured' in rbac.stdout"
+      run_once: true
+
+    - name: Wait for the token controller to fill the deployer token
+      ansible.builtin.command:
+        cmd: k3s kubectl -n {{ app_namespace }} get secret deployer-token -o jsonpath={.data.token}
+      register: deployer_token
+      until: deployer_token.stdout | length > 0
+      retries: 10
+      delay: 3
+      changed_when: false
+      no_log: true
+      run_once: true
+
+    - name: Read the cluster CA
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/tls/server-ca.crt
+      register: cluster_ca
+      run_once: true
+
+    - name: Kubeconfig directory on the controller
+      ansible.builtin.file:
+        path: "{{ deployer_kubeconfig | dirname }}"
+        state: directory
+        mode: "0700"
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+    - name: Write the deployer kubeconfig on the controller (mode 600)
+      ansible.builtin.copy:
+        dest: "{{ deployer_kubeconfig }}"
+        mode: "0600"
+        content: |
+          apiVersion: v1
+          kind: Config
+          clusters:
+            - name: k3s-lab
+              cluster:
+                server: https://{{ api_endpoint }}:6443
+                certificate-authority-data: {{ cluster_ca.content }}
+          users:
+            - name: nightscout-deployer
+              user:
+                token: {{ deployer_token.stdout | b64decode }}
+          contexts:
+            - name: nightscout
+              context:
+                cluster: k3s-lab
+                user: nightscout-deployer
+                namespace: {{ app_namespace }}
+          current-context: nightscout
+      delegate_to: localhost
+      become: false
+      no_log: true
+      run_once: true
