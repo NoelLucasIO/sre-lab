@@ -58,6 +58,41 @@ roleRef:
   kind: Role
   name: deployer
 ---
+# SLI exporter (ADR 0008): counts tconnectsync poll outcomes from its log. Reads pods and their
+# logs in this namespace only; no Secrets (its API secret arrives as an env var via the kubelet).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ns-exporter
+  namespace: {{ app_namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ns-exporter
+  namespace: {{ app_namespace }}
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ns-exporter
+  namespace: {{ app_namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: ns-exporter
+    namespace: {{ app_namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ns-exporter
+---
 apiVersion: v1
 kind: Secret
 metadata:

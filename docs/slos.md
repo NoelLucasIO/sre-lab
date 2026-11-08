@@ -4,10 +4,16 @@ Measured service: the Nightscout copy in namespace `nightscout` (ADR 0007), eval
 
 | SLO | SLI (good / valid) | Target | Fast burn | Status |
 |---|---|---|---|---|
-| CGM data freshness | 5-minute windows in which the newest CGM entry is < 10 min old / all windows | 99% | page | provisional: validate against history |
+| CGM data freshness | 5-minute windows in which the newest CGM entry is < 10 min old / all windows | 99% | page | measured 99.24% (5 days); see below |
 | API availability | successful authenticated API probes through the Ingress / all probes | 99.5% | page | probe mechanism to be decided |
 | tconnectsync poll success | successful Tandem Source polls / all polls | 99% | page | defined |
 | Pump data latency | pump events stored ≤ T after they happened / all pump events | 99% at T to be set from data | ticket only | baseline measured; T after 1 week |
+
+## Freshness: measured before committing to 99%
+
+Live instance, 1,445 five-minute windows (2026-11-03 → 2026-11-08): **99.24%** good. Every bad window came from one gap, 11-05 11:08 → 12:13 Eastern (55 min of bad windows), which is the CGM sensor change started at 11:11: the old sensor's last reading, then the new one's warm-up. The only other gap was a single dropped reading (10 min), which cost no budget.
+
+So, in the sample, ordinary operation never missed, and the budget was spent on planned maintenance. At about 55 minutes per change and a change every 10 days, sensor changes use about 2.75 h of the 28-day budget (about 6.7 h at 99%), roughly 40%. A sensor change makes the copy and the live instance stale together, which is how alerting tells upstream causes from ours; the freshness runbook covers it as expected spend, not an incident. Revisit the target with 28 days of data after the alert-tuning week.
 
 ## Why sync latency became two SLOs
 

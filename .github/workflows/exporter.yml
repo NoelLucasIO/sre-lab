@@ -1,0 +1,79 @@
+# sre-lab: Nightscout SLI exporter image (ADR 0008)
+#   PR:         unit tests + image build + container smoke test (GitHub-hosted, no LAN, no push)
+#   push main:  the same, then push ghcr.io/noellucasio/ns-exporter:sha-<commit> and print the
+#               name:tag@sha256 reference that k8s/nightscout pins (check-images.sh policy).
+#               Tags are per commit and never reused, so a pinned reference always means one build.
+name: exporter
+
+on:
+  pull_request:
+    paths:
+      - 'exporter/**'
+      - '.github/workflows/exporter.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'exporter/**'
+      - '.github/workflows/exporter.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/noellucasio/ns-exporter
+
+jobs:
+  test:
+    name: exporter tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unit tests (deprecations are errors)
+        run: python3 -W error::DeprecationWarning -m unittest -v exporter/test_ns_exporter.py
+
+      - name: Build the image
+        run: docker build -t ns-exporter:ci exporter
+
+      - name: Smoke test the container (no Nightscout reachable -> up 0, still serving)
+        run: |
+          docker run -d --name nsx -p 9101:9101 -e API_SECRET=smoke-7f3a9c2e -e NS_URL=http://127.0.0.1:9 -e INTERVAL=2 ns-exporter:ci
+          for i in $(seq 1 15); do curl -fsS http://127.0.0.1:9101/healthz >/dev/null 2>&1 && break; sleep 1; done
+          sleep 3
+          body=$(curl -fsS http://127.0.0.1:9101/metrics)
+          echo "$body" | grep -E '^(nightscout_up|ns_exporter_errors_total)'
+          echo "$body" | grep -qx 'nightscout_up 0'
+          [ "$(docker inspect -f '{{.Config.User}}' ns-exporter:ci)" = "65534:65534" ]
+          if docker logs nsx 2>&1 | grep -q smoke-7f3a9c2e; then echo "::error::secret in log"; exit 1; fi
+          if echo "$body" | grep -q smoke-7f3a9c2e; then echo "::error::secret in metrics"; exit 1; fi
+          start=$(date +%s); docker stop -t 20 nsx >/dev/null; took=$(( $(date +%s) - start ))
+          echo "stopped in ${took}s"; [ "$took" -lt 5 ] || { echo "::error::SIGTERM not handled (took ${took}s)"; exit 1; }
+
+      - name: Container log
+        if: always()
+        run: docker logs nsx 2>&1 | tail -20 || true
+
+  publish:
+    name: publish image
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and push
+        run: |
+          tag="sha-${GITHUB_SHA::7}"
+          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker build -t "$IMAGE:$tag" exporter
+          docker push "$IMAGE:$tag"
+          digest=$(docker inspect -f '{{index .RepoDigests 0}}' "$IMAGE:$tag" | cut -d@ -f2)
+          ref="$IMAGE:$tag@$digest"
+          echo "pinned reference: $ref"
+          { echo "### Exporter image"; echo; echo "Pin in \`k8s/nightscout\`:"; echo; echo '```'; echo "$ref"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
