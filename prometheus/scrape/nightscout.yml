@@ -10,3 +10,8 @@ scrape_configs:
       - targets: ['192.168.2.40:80']
         labels:
           instance: k3s-copy
+      # Live pod on fedora (prometheus/ns-exporter-live.container). The exporter serves any path
+      # ending in /metrics, so one metrics_path covers both.
+      - targets: ['127.0.0.1:9102']
+        labels:
+          instance: live

@@ -1,0 +1,33 @@
+# ~/.config/containers/systemd/ns-exporter-live.container  (rootless, user nlucas, linger)
+# SLI exporter for the LIVE Nightscout pod (ADR 0008): same image and digest as the k3s copy's
+# exporter, so the two instances are measured identically. API metrics only (freshness, pump
+# latency); poll counts come from the copy, whose log is readable through the Kubernetes API.
+[Unit]
+Description=Nightscout SLI exporter (live instance, sre-lab)
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=ns-exporter-live
+Image=ghcr.io/noellucasio/ns-exporter:sha-a06b1f6@sha256:7020af537fd7c14bc0ec4461addb4eec343f1d55bb8e210b3a44f258800f8df0
+# Straight to the pod's published port, not through the reverse proxy: same path as the copy.
+Environment=NS_URL=http://host.containers.internal:1337
+Environment=LOG_SOURCE=none
+Environment=INTERVAL=60
+Secret=ns-api-secret,type=env,target=API_SECRET
+# Prometheus (host network) scrapes 127.0.0.1:9102; nothing listens on the LAN.
+PublishPort=127.0.0.1:9102:9101
+ReadOnly=true
+NoNewPrivileges=true
+DropCapability=ALL
+HealthCmd=["python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9101/healthz', timeout=3)"]
+HealthInterval=60s
+HealthStartPeriod=20s
+HealthOnFailure=kill
+
+[Service]
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
