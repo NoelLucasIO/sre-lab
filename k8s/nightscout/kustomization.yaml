@@ -12,6 +12,7 @@ resources:
   - mongo.yaml
   - nightscout.yaml
   - tconnectsync.yaml
+  - exporter.yaml
 # Hash-suffixed ConfigMaps: a config change rolls the pods, and `rollout undo` restores the
 # previous config along with the previous image.
 configMapGenerator:
