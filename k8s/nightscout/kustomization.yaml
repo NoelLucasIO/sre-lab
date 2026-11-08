@@ -34,3 +34,7 @@ configMapGenerator:
       - NS_URL=http://nightscout:1337/
       - TIMEZONE_NAME=America/New_York
       - TCONNECT_REGION=US
+      # Phase 3: poll Tandem Source every 5 min instead of the adaptive wait
+      # (capped at 25 min). Copy only, to compare against the live instance.
+      - AUTOUPDATE_USE_FIXED_SLEEP=true
+      - AUTOUPDATE_DEFAULT_SLEEP_SECONDS=300
