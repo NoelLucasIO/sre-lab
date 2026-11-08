@@ -18,6 +18,26 @@
       changed_when: "' created' in rbac.stdout or ' configured' in rbac.stdout"
       run_once: true
 
+    - name: Exporter ServiceAccount has exactly the access it needs (both ways)
+      ansible.builtin.command:
+        cmd: >-
+          k3s kubectl auth can-i {{ item.check }} -n {{ item.ns | default(app_namespace) }}
+          --as=system:serviceaccount:{{ app_namespace }}:ns-exporter
+      loop:
+        - {check: "list pods", want: "yes"}
+        - {check: "get pods --subresource=log", want: "yes"}
+        - {check: "get secrets", want: "no"}
+        - {check: "get secret/nightscout-secrets", want: "no"}
+        - {check: "create pods", want: "no"}
+        - {check: "delete pods", want: "no"}
+        - {check: "get pods", ns: "kube-system", want: "no"}
+      loop_control:
+        label: "{{ item.check }} -n {{ item.ns | default(app_namespace) }} -> {{ item.want }}"
+      register: exporter_can_i
+      changed_when: false
+      failed_when: exporter_can_i.stdout != item.want
+      run_once: true
+
     - name: Wait for the token controller to fill the deployer token
       ansible.builtin.command:
         cmd: k3s kubectl -n {{ app_namespace }} get secret deployer-token -o jsonpath={.data.token}
