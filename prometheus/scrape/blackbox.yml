@@ -1,0 +1,38 @@
+# Availability probes (Blackbox Exporter on 127.0.0.1:9115, prometheus/blackbox.container).
+# probe_success per target is the SLI; `instance` names the Nightscout instance, `node` the
+# k3s node (or fedora) the probe went through.
+scrape_configs:
+  - job_name: blackbox-ns-copy
+    metrics_path: /probe
+    params:
+      module: [ns_copy]
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['http://192.168.2.40/api/v1/status.json']
+        labels: {node: k3s-server-1}
+      - targets: ['http://192.168.2.41/api/v1/status.json']
+        labels: {node: k3s-agent-1}
+      - targets: ['http://192.168.2.42/api/v1/status.json']
+        labels: {node: k3s-agent-2}
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
+      - target_label: instance
+        replacement: k3s-copy
+  - job_name: blackbox-ns-live
+    metrics_path: /probe
+    params:
+      module: [ns_live]
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['http://127.0.0.1:1337/api/v1/status.json']
+        labels: {node: fedora}
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
+      - target_label: instance
+        replacement: live
