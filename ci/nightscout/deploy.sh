@@ -11,7 +11,7 @@ DIR=${DIR:-k8s/nightscout}
 ROLLOUT_TIMEOUT=${ROLLOUT_TIMEOUT:-300s}
 REPORT=${REPORT:-/dev/null}
 HERE=$(cd "$(dirname "$0")" && pwd)
-WORKLOADS=(statefulset/mongo deployment/nightscout deployment/tconnectsync)
+WORKLOADS=(statefulset/mongo deployment/nightscout deployment/tconnectsync deployment/ns-exporter)
 
 k(){ kubectl -n "$NS" "$@"; }
 gen(){ k get "$1" -o jsonpath='{.metadata.generation}' 2>/dev/null || true; }

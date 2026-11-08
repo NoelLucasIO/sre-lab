@@ -1,0 +1,98 @@
+# SLI exporter (ADR 0008, exporter/). Reads the copy's API and tconnectsync's log; fedora's
+# Prometheus scrapes it through the Ingress at /nsexporter/metrics. ServiceAccount and Role
+# (pods + pods/log, read-only) come from ansible/cluster-access.yml, not from this kustomization.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ns-exporter
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 180
+  # One exporter at a time: two pods behind one scrape target would interleave two counters.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ns-exporter
+  template:
+    metadata:
+      labels:
+        app: ns-exporter
+    spec:
+      serviceAccountName: ns-exporter
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: ns-exporter
+          image: ghcr.io/noellucasio/ns-exporter:sha-a06b1f6@sha256:7020af537fd7c14bc0ec4461addb4eec343f1d55bb8e210b3a44f258800f8df0
+          env:
+            - name: NS_URL
+              value: http://nightscout:1337
+            - name: LOG_SOURCE
+              value: k8s
+            - name: POD_SELECTOR
+              value: app=tconnectsync
+            - name: CONTAINER
+              value: tconnectsync
+            - name: INTERVAL
+              value: "60"
+            - name: API_SECRET
+              valueFrom:
+                secretKeyRef: {name: nightscout-secrets, key: API_SECRET}
+          ports:
+            - name: http
+              containerPort: 9101
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 96Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ns-exporter
+spec:
+  selector:
+    app: ns-exporter
+  ports:
+    - name: http
+      port: 9101
+      targetPort: http
+---
+# No host: reachable as http://<any node>/nsexporter/metrics. Exposes timestamps and counts only,
+# never readings or the secret; LAN-only like the rest of the cluster.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ns-exporter
+spec:
+  ingressClassName: traefik
+  rules:
+    - http:
+        paths:
+          - path: /nsexporter
+            pathType: Prefix
+            backend:
+              service:
+                name: ns-exporter
+                port:
+                  name: http

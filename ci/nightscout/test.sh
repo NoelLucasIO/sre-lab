@@ -110,6 +110,10 @@ GENS=""   MODE=fresh case_ "first deploy fails -> nothing to undo"  deploy.sh 1 
   "CHANGED=statefulset/mongo_deployment/nightscout_deployment/tconnectsync FAIL_ROLLOUT=deployment/nightscout"
 GENS=$ALL MODE=stale case_ "ingress-only change, stale -> no undo"  deploy.sh 1 "" \
   "CHANGED="
+GENS=$ALL MODE=fresh case_ "new exporter fails -> nothing to undo"  deploy.sh 1 "" \
+  "CHANGED=deployment/ns-exporter FAIL_ROLLOUT=deployment/ns-exporter"
+GENS="$ALL deployment_ns-exporter=1" MODE=fresh case_ "exporter change fails -> undo exporter only" deploy.sh 1 "deployment/ns-exporter" \
+  "CHANGED=deployment/ns-exporter FAIL_ROLLOUT=deployment/ns-exporter"
 
 echo "--- check-images.sh"
 img(){ printf '      - image: %s\n' "$@"; }

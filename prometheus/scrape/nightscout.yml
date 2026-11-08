@@ -1,0 +1,12 @@
+# Repo-owned scrape fragment for fedora's Prometheus (ADR 0008), loaded through
+# `scrape_config_files` in the hand-maintained prometheus.yml.
+scrape_configs:
+  - job_name: nightscout-exporter
+    metrics_path: /nsexporter/metrics
+    scrape_interval: 60s
+    static_configs:
+      # One node for now: if 192.168.2.40 is down, this target is down too (no DNS name for the
+      # ingress yet; see the open DNS item). The `up` series makes that visible, not silent.
+      - targets: ['192.168.2.40:80']
+        labels:
+          instance: k3s-copy
