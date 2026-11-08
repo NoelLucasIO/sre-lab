@@ -1,0 +1,31 @@
+# Blackbox Exporter modules for the API availability SLO (docs/slos.md: 99.5%).
+# Deployed to /990/blackbox/blackbox.yml (its own directory: Prometheus relabels its config dir
+# with :Z on restart), mounted read-only by
+# prometheus/blackbox.container. A probe succeeds only if the authenticated API answers 2xx with
+# "status":"ok" in the body, so a proxy error page or a login redirect is not "available".
+# The api-secret header (sha1 of API_SECRET, which is itself a credential) is read from Podman
+# secrets mounted as files; it never appears in this file or on a command line.
+modules:
+  ns_copy:
+    prober: http
+    timeout: 5s
+    http:
+      preferred_ip_protocol: ip4
+      follow_redirects: false
+      # No DNS record yet: probe each node's Traefik with the Ingress host name.
+      headers:
+        Host: ns-k3s.noellucas.io
+      http_headers:
+        api-secret:
+          files: [/run/secrets/ns-k3s-api-hash]
+      fail_if_body_not_matches_regexp: ['"status":"ok"']
+  ns_live:
+    prober: http
+    timeout: 5s
+    http:
+      preferred_ip_protocol: ip4
+      follow_redirects: false
+      http_headers:
+        api-secret:
+          files: [/run/secrets/ns-live-api-hash]
+      fail_if_body_not_matches_regexp: ['"status":"ok"']
