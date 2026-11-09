@@ -37,9 +37,15 @@ podman exec prometheus prometheus --version | head -1      # the version fedora 
 
 Fix the rule in the repo (`prometheus/slo/` or `prometheus/rules/inputs.yml`), bump `PROMETHEUS_IMAGE` in `.github/workflows/rules.yml` to the version fedora now runs so CI tests it, merge, copy the files to `/990/prometheus/config/sre-lab/rules/`, then `podman exec prometheus promtool check config /etc/prometheus/prometheus.yml && ~/reload-prometheus.sh`.
 
-## Watchdog
+## Watchdog and the heartbeat (healthchecks.io)
 
-Always firing, by design. Alertmanager forwards it as a heartbeat; when it stops arriving, Prometheus or Alertmanager is down. No action while it fires.
+`Watchdog` always fires, by design. Alertmanager sends it to healthchecks.io (check **sre-lab Watchdog**) every minute; healthchecks.io alerts (PagerDuty, through a separate integration key, and email) when no ping arrives for 5 min + 5 min grace. That alert means the **whole monitoring path is down**, so nothing else will page you: start at the bottom.
+
+1. Is fedora up and online? (`ping 192.168.2.45`; OPNsense; power)
+2. `systemctl --user status prometheus alertmanager --no-pager | grep Active`
+3. Is Prometheus sending to Alertmanager? `curl -s localhost:9091/api/v1/alertmanagers` lists `127.0.0.1:9095`.
+4. Is the webhook failing? `curl -s 127.0.0.1:9095/metrics | grep 'alertmanager_notifications_failed_total{integration="webhook"'`; `podman logs --tail 30 alertmanager`.
+5. Ping URL secret wrong or rotated: recreate Podman secret `healthchecks-watchdog-url` (same `read -rs` pattern as the PagerDuty key), then `systemctl --user restart alertmanager`.
 
 ## Rule and fragment files on fedora
 
