@@ -7,21 +7,27 @@ is a Nightscout + tconnectsync stack, so every SLO, alert and drill measures rea
 |---|---|---|
 | 1 | Terraform modules, remote state with enforced locking, policy-as-code | **Done** (2026-11-05) |
 | 2 | CI/CD: plan on PR, approval gate, change-risk checks, automatic rollback | **Done** (2026-11-06) |
-| 3 | SLIs/SLOs, multi-window burn-rate alerts, on-call routing, runbooks | Planned |
+| 3 | SLIs/SLOs, multi-window burn-rate alerts, on-call routing, runbooks | **Alerting live** (2026-11-09); tuning week and SLO dashboard in progress |
 | 4 | AWS via Terraform, offsite backups, timed DR drill, game day, postmortem | Planned |
 
 ## Layout
 
 ```
 .github/workflows/    terraform (plan/gate/apply) · drift (nightly) · k3s (Ansible) · nightscout (deploy + rollback)
+                      exporter (test, build, GHCR) · rules (Sloth drift, promtool tests, Alertmanager routing)
 ansible/              k3s via the pinned k3s.orchestration collection; namespace-scoped deployer for the app pipeline
 ci/                   change-risk gate, self-hosted runner install, Nightscout deploy/health/rollback scripts + tests
 docs/decisions/       Architecture decision records
+docs/slos.md          SLO definitions and the measurements behind them
+docs/runbooks/        One runbook per alert, every command executed before merge
+exporter/             Nightscout SLI exporter (stdlib Python, tests, Dockerfile)
 garage/               Garage S3 (rootless Podman quadlet), backup target
 k8s/nightscout/       Nightscout, MongoDB and tconnectsync on k3s (kustomize, digest-pinned images)
 keys/                 Public SSH keys baked into VMs by cloud-init
 policy/               Custom Checkov policies + their self-test
 postgres/             Terraform state database bootstrap
+prometheus/           SLO specs (Sloth), generated + hand-written rules and their tests, scrape fragments,
+                      Blackbox and Alertmanager config, quadlets for the monitoring side
 terraform/envs/       Root modules: lab (k3s VMs + DNS), lab-base (cloud images), observability (Grafana), prod-lab
 terraform/lock-test/  Proof that state locking excludes a second writer
 ```
@@ -67,6 +73,34 @@ terraform/lock-test/  Proof that state locking excludes a second writer
 - **Hardened self-hosted runner:** a locked-down system user under a sandboxed systemd unit; six
   runner and workflow failures diagnosed by evidence and bisection, each recorded in ADR 0005.
 
+## Phase 3 evidence
+
+- **Targets set from measured data, not guessed:** the plan's sync SLO ("pulls within 15 minutes,
+  99%") would have been met **6.4%** of the time (1,184 events: p50 44 min, p99 83 min). The delay
+  was traced to Tandem Source's upload cadence plus tconnectsync's adaptive sleep, capped at 25
+  minutes (read in its source). The SLO was split by who can act: poll success (ours, pages) and
+  end-to-end latency (mostly upstream, ticket only). A fix (fixed 5-minute polling) runs on the
+  copy as an A/B test against the live instance before it touches production
+  ([`docs/slos.md`](docs/slos.md)).
+- **Freshness target validated against history:** 99.24% over 5 days; the only budget spent was a
+  CGM sensor change, matched to the minute. Both instances go stale together during a sensor
+  warm-up, so an inhibit rule keeps it from paging while the SLO still counts it.
+- **SLIs measured from outside the cluster:** an exporter (digest-pinned, least-privilege
+  ServiceAccount proven with `auth can-i` both ways, secret never in logs or metrics, CI-asserted)
+  and authenticated Blackbox probes through every node's ingress, checking the response body so an
+  error page is not "up" (ADR 0008).
+- **Burn-rate alerting, generated and tested:** Sloth multi-window, multi-burn-rate rules over 28
+  days, regenerated in CI and required to match. `promtool test rules` drives synthetic series
+  through the real rules (what pages, what tickets, what stays quiet); deliberate rule mutations
+  were all caught. Testing found a real bug before it mattered: event-sparse SLIs produced NaN
+  ratios that would have hidden the error budget for 28 days.
+- **On-call path proven end to end:** Alertmanager routes pages to PagerDuty at high urgency and
+  tickets at low urgency, with routing tests in CI. A synthetic page reached the phone in about 25
+  seconds with its runbook link and resolved itself; a real low-urgency ticket did not wake anyone.
+  An external dead man's switch (healthchecks.io) pages if the monitoring stack itself goes silent.
+- **Runbooks that work:** one per alert, starting with "upstream or us?". Every command was run
+  before merge, which caught two that would have failed during an incident.
+
 ## Decisions
 
 - [ADR 0001: Terraform state backend](docs/decisions/0001-terraform-state-backend.md): tested the
@@ -82,6 +116,8 @@ terraform/lock-test/  Proof that state locking excludes a second writer
   CI, inventory from Terraform, versions chosen from the support matrix.
 - [ADR 0007: App delivery and rollback](docs/decisions/0007-app-delivery-and-rollback.md): a full
   Nightscout copy on k3s, digest pinning, scoped deploy access, and the rollback test result.
+- [ADR 0008: SLO monitoring placement](docs/decisions/0008-slo-monitoring-placement.md): SLOs
+  evaluated outside the cluster on fedora's Prometheus; the repo owns only its rule and scrape fragments.
 
 ## Host
 
