@@ -1,13 +1,13 @@
 # Run from repo root: `checkov --config-file .checkov.yaml`
-# Built-in Checkov policies cover the big clouds, not libvirt/Grafana/Technitium: on this repo they
-# evaluate 0 checks. The enforcement lives in policy/checkov (proven by policy/test.sh).
+# Built-in Checkov policies (all of them) plus this repo's own in policy/checkov.
+# Built-ins cover AWS (envs/aws, envs/aws-bootstrap) but not libvirt/Grafana/Technitium; those are
+# enforced by the custom CKV2_SRELAB_* policies, proven by policy/test.sh.
+# Every skip is inline next to the resource, with its reason (`#checkov:skip=ID:reason`).
 directory:
   - terraform
 framework:
   - terraform
 external-checks-dir:
   - policy/checkov
-check:
-  - CKV2_SRELAB_*
 compact: true
 quiet: true
