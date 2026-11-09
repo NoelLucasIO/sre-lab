@@ -105,16 +105,41 @@ tests:
       - eval_time: 30m
         alertname: TconnectsyncPollFailureBudgetBurn
         exp_alerts:
-          - exp_labels: {category: sync, instance: k3s-copy, sloth_id: nightscout-tconnectsync-poll-success, sloth_service: nightscout, sloth_slo: tconnectsync-poll-success, severity: page, sloth_severity: page}
+          - exp_labels: {category: sync, instance: k3s-copy, sloth_id: nightscout-tconnectsync-polls, sloth_service: nightscout, sloth_slo: tconnectsync-polls, severity: page, sloth_severity: page}
             exp_annotations:
               summary: "tconnectsync on the k3s copy is failing Tandem Source polls."
               runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/tconnectsync-polls.md"
-              title: "(page) nightscout tconnectsync-poll-success SLO error budget burn rate is too fast."
-          - exp_labels: {category: sync, instance: k3s-copy, sloth_id: nightscout-tconnectsync-poll-success, sloth_service: nightscout, sloth_slo: tconnectsync-poll-success, severity: ticket, sloth_severity: ticket}
+              title: "(page) nightscout tconnectsync-polls SLO error budget burn rate is too fast."
+          - exp_labels: {category: sync, instance: k3s-copy, sloth_id: nightscout-tconnectsync-polls, sloth_service: nightscout, sloth_slo: tconnectsync-polls, severity: ticket, sloth_severity: ticket}
             exp_annotations:
               summary: "tconnectsync on the k3s copy is failing Tandem Source polls."
               runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/tconnectsync-polls.md"
-              title: "(ticket) nightscout tconnectsync-poll-success SLO error budget burn rate is too fast."
+              title: "(ticket) nightscout tconnectsync-polls SLO error budget burn rate is too fast."
+
+  - name: a window with no events gives error ratio 0, not NaN (NaN would poison the 28-day budget)
+    interval: 30s
+    input_series:
+      - series: 'tconnectsync_polls_total{job="nightscout-exporter",instance="k3s-copy",result="success"}'
+        values: '5x40'                  # counter flat: no polls in any 5m window
+      - series: 'tconnectsync_polls_total{job="nightscout-exporter",instance="k3s-copy",result="failure"}'
+        values: '0x40'
+      - series: 'tconnectsync_container_restarts{job="nightscout-exporter",instance="k3s-copy"}'
+        values: '0x40'
+      - series: 'nightscout_pump_event_latency_seconds_count{job="nightscout-exporter",instance="k3s-copy"}'
+        values: '7x40'
+      - series: 'nightscout_pump_event_latency_seconds_bucket{job="nightscout-exporter",instance="k3s-copy",le="5400"}'
+        values: '7x40'
+    promql_expr_test:
+      - expr: slo:sli_error:ratio_rate5m{sloth_slo="tconnectsync-polls"}
+        eval_time: 15m
+        exp_samples:
+          - labels: 'slo:sli_error:ratio_rate5m{instance="k3s-copy",sloth_id="nightscout-tconnectsync-polls",sloth_service="nightscout",sloth_slo="tconnectsync-polls",sloth_window="5m"}'
+            value: 0
+      - expr: slo:sli_error:ratio_rate5m{sloth_slo="pump-latency"}
+        eval_time: 15m
+        exp_samples:
+          - labels: 'slo:sli_error:ratio_rate5m{instance="k3s-copy",sloth_id="nightscout-pump-latency",sloth_service="nightscout",sloth_slo="pump-latency",sloth_window="5m"}'
+            value: 0
 
   # --- Pump latency: mostly upstream, so it can only ever ticket ---------------------------
   - name: late pump data tickets and never pages
@@ -129,11 +154,11 @@ tests:
       - eval_time: 60m
         alertname: PumpDataLatencyBudgetBurn
         exp_alerts:
-          - exp_labels: {category: sync, instance: k3s-copy, sloth_id: nightscout-pump-data-latency, sloth_service: nightscout, sloth_slo: pump-data-latency, severity: ticket, sloth_severity: ticket}
+          - exp_labels: {category: sync, instance: k3s-copy, sloth_id: nightscout-pump-latency, sloth_service: nightscout, sloth_slo: pump-latency, severity: ticket, sloth_severity: ticket}
             exp_annotations:
               summary: "Pump data is reaching Nightscout late (end to end, includes Tandem Source)."
               runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/pump-data-latency.md"
-              title: "(ticket) nightscout pump-data-latency SLO error budget burn rate is too fast."
+              title: "(ticket) nightscout pump-latency SLO error budget burn rate is too fast."
 
   # --- Guards -----------------------------------------------------------------------------
   - name: exporter down tickets after 10 min; rule failures and the watchdog

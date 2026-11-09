@@ -49,7 +49,7 @@ slos:
         labels:
           severity: ticket
 
-  - name: "tconnectsync-poll-success"
+  - name: "tconnectsync-polls"
     objective: 99
     description: "Tandem Source polls that succeed; failed polls and container restarts are errors."
     sli:
@@ -57,9 +57,12 @@ slos:
         error_query: >-
           (sum(increase(tconnectsync_polls_total{instance="k3s-copy",result="failure"}[{{.window}}])) or vector(0))
           + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[{{.window}}])) or vector(0))
+        # "> 0 or vector(1)": a window with no polls has error ratio 0, not 0/0 = NaN. A NaN 5m ratio
+        # would poison the 28-day budget, which Sloth averages from the 5m ratios.
         total_query: >-
-          (sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[{{.window}}])) or vector(0))
-          + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[{{.window}}])) or vector(0))
+          ((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[{{.window}}])) or vector(0))
+          + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[{{.window}}])) or vector(0)))
+          > 0 or vector(1)
     alerting:
       name: TconnectsyncPollFailureBudgetBurn
       labels:
@@ -74,16 +77,19 @@ slos:
         labels:
           severity: ticket
 
-  - name: "pump-data-latency"
+  - name: "pump-latency"
     objective: 99
     # T = 90 min is provisional: set from the copy-vs-live comparison due 2026-11-15.
     description: "Pump events stored in Nightscout within 90 minutes of happening (end to end, mostly upstream)."
     sli:
       events:
         error_query: >-
-          sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[{{.window}}]))
-          - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[{{.window}}]))
-        total_query: sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[{{.window}}]))
+          (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[{{.window}}]))
+          - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[{{.window}}])))
+          or vector(0)
+        # Events arrive in hourly batches, so most 5m windows are empty: same NaN guard as above.
+        total_query: >-
+          sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[{{.window}}])) > 0 or vector(1)
     alerting:
       name: PumpDataLatencyBudgetBurn
       labels:
