@@ -12,3 +12,8 @@ output "dashboard_urls" {
   description = "Dashboard URLs keyed by JSON file name (without .json)."
   value       = { for k, d in grafana_dashboard.this : k => d.url }
 }
+
+output "alertmanager_url" {
+  description = "Grafana path that shows the managed Alertmanager's alert groups, or null."
+  value       = try("/alerting/groups?alertmanager=${grafana_data_source.alertmanager[0].name}", null)
+}

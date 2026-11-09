@@ -13,8 +13,16 @@ module "grafana" {
     is_default = true
   }
 
+  # Alertmanager on fedora (prometheus/alertmanager.container). Grafana uses the host network,
+  # so loopback reaches it; the name is what PagerDuty links select (prometheus/alertmanager.yml).
+  alertmanager = {
+    name = "sre-lab-alertmanager"
+    uid  = "sre-lab-alertmanager"
+    url  = "http://127.0.0.1:9095"
+  }
+
   dashboards_dir = "${path.module}/dashboards"
 
-  # First rules arrive with the Phase 3 SLOs (each needs a runbook_url).
+  # SLO alerting lives in Prometheus (prometheus/slo, prometheus/rules; ADR 0008), not in Grafana.
   alert_rule_groups = {}
 }

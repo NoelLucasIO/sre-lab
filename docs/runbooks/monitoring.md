@@ -43,9 +43,13 @@ Always firing, by design. Alertmanager forwards it as a heartbeat; when it stops
 
 ## Rule and fragment files on fedora
 
+Configs are mounted as **directories**, so a reload sees a replaced file. (A single-file bind mount keeps the old inode: the reload returns 200 and changes nothing.) The directory must be readable by the container's user (`chmod 755`): Blackbox and Alertmanager run as `nobody`, and a `700` directory fails with `permission denied` on start.
+
+
 | Repo | fedora |
 |---|---|
 | `prometheus/rules/inputs.yml`, `prometheus/rules/sloth/*.yml` | `/990/prometheus/config/sre-lab/rules/…` (via `rule_files` in `prometheus.yml`) |
 | `prometheus/scrape/*.yml` | `/990/prometheus/config/sre-lab/scrape/` (via `scrape_config_files`) |
-| `prometheus/blackbox.yml` | `/990/blackbox/blackbox.yml` |
+| `prometheus/blackbox.yml` | `/990/blackbox/blackbox.yml` (directory mounted) |
+| `prometheus/alertmanager.yml` | `/990/alertmanager/config/alertmanager.yml` (directory mounted); apply with `curl -X POST 127.0.0.1:9095/-/reload` |
 | `prometheus/*.container` | `~/.config/containers/systemd/` |

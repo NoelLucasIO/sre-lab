@@ -11,8 +11,9 @@ ContainerName=blackbox
 Image=quay.io/prometheus/blackbox-exporter:v0.29.1@sha256:ea1c7aa3ef3f307cd03e85f34abb604478ccb90b567fc690da0cd9776da76b13
 # Host network: reaches the k3s nodes on the LAN and the live pod on 127.0.0.1:1337.
 Network=host
-Exec=--config.file=/etc/blackbox_exporter/config.yml --web.listen-address=127.0.0.1:9115
-Volume=/990/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro,Z
+Exec=--config.file=/etc/blackbox_exporter/blackbox.yml --web.listen-address=127.0.0.1:9115
+# The directory, not the file: a replaced file would otherwise stay invisible to the container.
+Volume=/990/blackbox:/etc/blackbox_exporter:ro,Z
 # The image sets no user; run as nobody and give it the two header files, readable by it only.
 User=65534:65534
 Secret=ns-k3s-api-hash,type=mount,uid=65534,mode=0400

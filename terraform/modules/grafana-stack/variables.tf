@@ -18,6 +18,21 @@ variable "prometheus" {
   default = null
 }
 
+variable "alertmanager" {
+  description = "External Alertmanager data source to manage. null = none. Links use ?alertmanager=<name>."
+  type = object({
+    name = string
+    uid  = string
+    url  = string
+  })
+  default = null
+
+  validation {
+    condition     = var.alertmanager == null ? true : can(regex("^[A-Za-z0-9_-]+$", var.alertmanager.name))
+    error_message = "Alertmanager data source name must be URL-safe (letters, digits, _ and -): links select it by name."
+  }
+}
+
 variable "dashboards_dir" {
   description = "Directory of dashboard JSON exports (*.json). Each must carry a stable top-level \"uid\"."
   type        = string
