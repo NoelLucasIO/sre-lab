@@ -1,0 +1,169 @@
+# promtool test rules prometheus/rules/tests/nightscout_test.yml
+# Synthetic series through the real rules: what pages, what tickets, and what must stay quiet.
+rule_files:
+  - ../inputs.yml
+  - ../sloth/nightscout.yml
+evaluation_interval: 30s
+
+tests:
+  # --- Freshness input and the upstream discriminator -------------------------------------
+  - name: freshness flips at 10 min; upstream alert needs both instances stale
+    interval: 30s
+    input_series:
+      # Newest reading frozen at t=0 on both: age = elapsed time.
+      - series: 'nightscout_newest_entry_timestamp_seconds{job="nightscout-exporter",instance="k3s-copy"}'
+        values: '0x60'
+      - series: 'nightscout_newest_entry_timestamp_seconds{job="nightscout-exporter",instance="live"}'
+        values: '0x60'
+    promql_expr_test:
+      - expr: nightscout:entry_stale:bool{instance="k3s-copy"}
+        eval_time: 9m
+        exp_samples:
+          - labels: 'nightscout:entry_stale:bool{job="nightscout-exporter",instance="k3s-copy"}'
+            value: 0
+      - expr: nightscout:entry_stale:bool{instance="k3s-copy"}
+        eval_time: 11m
+        exp_samples:
+          - labels: 'nightscout:entry_stale:bool{job="nightscout-exporter",instance="k3s-copy"}'
+            value: 1
+    alert_rule_test:
+      - eval_time: 13m        # stale since 10m, `for: 5m` not yet met
+        alertname: UpstreamCGMStale
+        exp_alerts: []
+      - eval_time: 16m
+        alertname: UpstreamCGMStale
+        exp_alerts:
+          - exp_labels: {severity: info, category: freshness, job: nightscout-exporter, instance: k3s-copy}
+            exp_annotations:
+              summary: "Both Nightscout instances are stale: upstream (sensor warm-up, phone, Dexcom Share)."
+              runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/cgm-freshness.md"
+
+  - name: only the copy stale is ours, not upstream
+    interval: 30s
+    input_series:
+      - series: 'nightscout_newest_entry_timestamp_seconds{job="nightscout-exporter",instance="k3s-copy"}'
+        values: '0x60'
+      - series: 'nightscout_newest_entry_timestamp_seconds{job="nightscout-exporter",instance="live"}'
+        values: '0+30x60'      # keeps up with the clock: always fresh
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: UpstreamCGMStale
+        exp_alerts: []
+
+  # --- Availability: fast burn pages, healthy stays quiet ---------------------------------
+  - name: probes failing on every node page within minutes
+    interval: 30s
+    input_series:
+      - series: 'probe_success{job="blackbox-ns-copy",instance="k3s-copy",node="k3s-server-1"}'
+        values: '1x20 0x40'    # healthy 10 min, then down
+      - series: 'probe_success{job="blackbox-ns-copy",instance="k3s-copy",node="k3s-agent-1"}'
+        values: '1x20 0x40'
+      - series: 'probe_success{job="blackbox-ns-copy",instance="k3s-copy",node="k3s-agent-2"}'
+        values: '1x20 0x40'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: NightscoutAPIAvailabilityBudgetBurn
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: NightscoutAPIAvailabilityBudgetBurn
+        exp_alerts:
+          - exp_labels: {category: availability, instance: k3s-copy, sloth_id: nightscout-api-availability, sloth_service: nightscout, sloth_slo: api-availability, severity: page, sloth_severity: page}
+            exp_annotations:
+              summary: "The k3s copy's API is failing probes fast enough to burn the 28-day budget."
+              runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/api-availability.md"
+              title: "(page) nightscout api-availability SLO error budget burn rate is too fast."
+          - exp_labels: {category: availability, instance: k3s-copy, sloth_id: nightscout-api-availability, sloth_service: nightscout, sloth_slo: api-availability, severity: ticket, sloth_severity: ticket}
+            exp_annotations:
+              summary: "The k3s copy's API is failing probes fast enough to burn the 28-day budget."
+              runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/api-availability.md"
+              title: "(ticket) nightscout api-availability SLO error budget burn rate is too fast."
+
+  - name: healthy probes raise nothing
+    interval: 30s
+    input_series:
+      - series: 'probe_success{job="blackbox-ns-copy",instance="k3s-copy",node="k3s-server-1"}'
+        values: '1x120'
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: NightscoutAPIAvailabilityBudgetBurn
+        exp_alerts: []
+
+  # --- Poll success: failed polls page ----------------------------------------------------
+  - name: failing Tandem Source polls page
+    interval: 30s
+    input_series:
+      - series: 'tconnectsync_polls_total{job="nightscout-exporter",instance="k3s-copy",result="success"}'
+        values: '0+1x40 40x80'          # polls succeed for 20 min, then stop succeeding
+      - series: 'tconnectsync_polls_total{job="nightscout-exporter",instance="k3s-copy",result="failure"}'
+        values: '0x40 0+1x80'           # and start failing
+      - series: 'tconnectsync_container_restarts{job="nightscout-exporter",instance="k3s-copy"}'
+        values: '0x120'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: TconnectsyncPollFailureBudgetBurn
+        exp_alerts: []
+      - eval_time: 30m
+        alertname: TconnectsyncPollFailureBudgetBurn
+        exp_alerts:
+          - exp_labels: {category: sync, instance: k3s-copy, sloth_id: nightscout-tconnectsync-poll-success, sloth_service: nightscout, sloth_slo: tconnectsync-poll-success, severity: page, sloth_severity: page}
+            exp_annotations:
+              summary: "tconnectsync on the k3s copy is failing Tandem Source polls."
+              runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/tconnectsync-polls.md"
+              title: "(page) nightscout tconnectsync-poll-success SLO error budget burn rate is too fast."
+          - exp_labels: {category: sync, instance: k3s-copy, sloth_id: nightscout-tconnectsync-poll-success, sloth_service: nightscout, sloth_slo: tconnectsync-poll-success, severity: ticket, sloth_severity: ticket}
+            exp_annotations:
+              summary: "tconnectsync on the k3s copy is failing Tandem Source polls."
+              runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/tconnectsync-polls.md"
+              title: "(ticket) nightscout tconnectsync-poll-success SLO error budget burn rate is too fast."
+
+  # --- Pump latency: mostly upstream, so it can only ever ticket ---------------------------
+  - name: late pump data tickets and never pages
+    interval: 30s
+    input_series:
+      # Every event arrives later than 90 min (bucket 5400 stays at 0 while count grows).
+      - series: 'nightscout_pump_event_latency_seconds_count{job="nightscout-exporter",instance="k3s-copy"}'
+        values: '0+1x240'
+      - series: 'nightscout_pump_event_latency_seconds_bucket{job="nightscout-exporter",instance="k3s-copy",le="5400"}'
+        values: '0x240'
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: PumpDataLatencyBudgetBurn
+        exp_alerts:
+          - exp_labels: {category: sync, instance: k3s-copy, sloth_id: nightscout-pump-data-latency, sloth_service: nightscout, sloth_slo: pump-data-latency, severity: ticket, sloth_severity: ticket}
+            exp_annotations:
+              summary: "Pump data is reaching Nightscout late (end to end, includes Tandem Source)."
+              runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/pump-data-latency.md"
+              title: "(ticket) nightscout pump-data-latency SLO error budget burn rate is too fast."
+
+  # --- Guards -----------------------------------------------------------------------------
+  - name: exporter down tickets after 10 min; rule failures and the watchdog
+    interval: 30s
+    input_series:
+      - series: 'up{job="nightscout-exporter",instance="live"}'
+        values: '1x10 0x60'             # down from 5 min
+      - series: 'prometheus_rule_evaluation_failures_total{job="prometheus",instance="localhost:9091",rule_group="x"}'
+        values: '0x10 1x60'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: NightscoutExporterDown
+        exp_alerts: []
+      - eval_time: 16m
+        alertname: NightscoutExporterDown
+        exp_alerts:
+          - exp_labels: {severity: ticket, category: monitoring, job: nightscout-exporter, instance: live}
+            exp_annotations:
+              summary: "The SLI exporter for live is not being scraped; its SLOs are blind."
+              runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/monitoring.md"
+      - eval_time: 8m
+        alertname: PrometheusRuleEvaluationFailures
+        exp_alerts:
+          - exp_labels: {severity: ticket, category: monitoring, job: prometheus, instance: "localhost:9091", rule_group: x}
+            exp_annotations:
+              summary: "Rule group x is failing to evaluate."
+              runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/monitoring.md"
+      - eval_time: 1m
+        alertname: Watchdog
+        exp_alerts:
+          - exp_labels: {severity: none, category: monitoring}
+            exp_annotations:
+              summary: "Heartbeat: the alerting pipeline is working."
