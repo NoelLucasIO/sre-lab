@@ -6,6 +6,8 @@ locals {
   # Same naming rule as envs/aws: the bucket is created there, scoped to here.
   backup_bucket_arn = "arn:${data.aws_partition.current.partition}:s3:::sre-lab-backups-${local.account_id}"
   oidc_host         = "token.actions.githubusercontent.com"
+  # Immutable subject prefix (see variables.tf).
+  sub_prefix = "repo:${var.github_repo.owner}@${var.github_repo.owner_id}/${var.github_repo.name}@${var.github_repo.id}"
 }
 
 # GitHub Actions OIDC: workflows exchange a short-lived GitHub token for short-lived AWS
@@ -34,8 +36,8 @@ data "aws_iam_policy_document" "plan_trust" {
       test     = "StringEquals"
       variable = "${local.oidc_host}:sub"
       values = [
-        "repo:${var.github_repo}:pull_request",        # PRs from branches in this repo (fork PRs never reach the runner)
-        "repo:${var.github_repo}:ref:refs/heads/main", # plan on push to main
+        "${local.sub_prefix}:pull_request",        # PRs from branches in this repo (fork PRs never reach the runner)
+        "${local.sub_prefix}:ref:refs/heads/main", # plan on push to main
       ]
     }
   }
@@ -89,7 +91,7 @@ data "aws_iam_policy_document" "apply_trust" {
     condition {
       test     = "StringEquals"
       variable = "${local.oidc_host}:sub"
-      values   = ["repo:${var.github_repo}:environment:${var.apply_environment}"]
+      values   = ["${local.sub_prefix}:environment:${var.apply_environment}"]
     }
   }
 }

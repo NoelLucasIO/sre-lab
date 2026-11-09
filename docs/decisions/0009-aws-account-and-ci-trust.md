@@ -29,6 +29,9 @@ plan/apply jobs run on the self-hosted `fedora` runner (ADR 0005).
    | `sre-lab-apply` | `environment:lab` (required reviewer) | Configure the backup bucket and the budget; nothing else. Explicitly denied: reading or deleting objects, deleting the bucket |
 
    Fork PRs never reach the runner (ADR 0005), so `pull_request` means a branch in this repo.
+   The repo was created after 2026-07-15, so GitHub issues the immutable subject format,
+   `repo:NoelLucasIO@352547848/sre-lab@1445998674:<context>`: the numeric IDs are never reused,
+   so a deleted-and-recreated repository with the same name cannot assume these roles.
 5. **CI cannot change its own permissions.** The OIDC provider and the roles live in their own
    root, `envs/aws-bootstrap`, applied only by a human with Identity Center credentials. CI
    validates and lints it on every PR and the nightly drift check plans it, but no workflow can

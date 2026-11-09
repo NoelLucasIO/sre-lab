@@ -4,14 +4,24 @@ variable "region" {
   default     = "us-east-2"
 }
 
+# Repositories created after 2026-07-15 get GitHub's immutable OIDC subject format:
+#   repo:OWNER@OWNER_ID/REPO@REPO_ID:<context>
+# The numeric IDs never change or get reused, so a deleted-and-recreated repo with the same name
+# cannot match these trust policies. IDs: `curl -s https://api.github.com/repos/OWNER/REPO`
+# (.owner.id, .id).
 variable "github_repo" {
-  description = "owner/name of the repository whose workflows may assume the CI roles."
-  type        = string
-  default     = "NoelLucasIO/sre-lab"
-
-  validation {
-    condition     = can(regex("^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$", var.github_repo))
-    error_message = "github_repo must be owner/name."
+  description = "Owner, repository and their immutable numeric IDs; the workflows of this repository may assume the CI roles."
+  type = object({
+    owner    = string
+    owner_id = number
+    name     = string
+    id       = number
+  })
+  default = {
+    owner    = "NoelLucasIO"
+    owner_id = 352547848
+    name     = "sre-lab"
+    id       = 1445998674
   }
 }
 
