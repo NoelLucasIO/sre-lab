@@ -1,0 +1,70 @@
+# sre-lab: Prometheus rules and fragments for fedora's Prometheus (ADR 0008)
+#   Sloth output is regenerated and must match what is committed; every rule file passes
+#   `promtool check rules`; the unit tests in prometheus/rules/tests pass; the scrape fragments
+#   and the Blackbox config load with the same tool versions that run on fedora.
+#   fedora's Prometheus auto-updates (ADR 0008): bump PROMETHEUS_IMAGE when it does, so these
+#   checks keep testing the version that actually evaluates the rules.
+name: rules
+
+on:
+  pull_request:
+    paths:
+      - 'prometheus/**'
+      - '.github/workflows/rules.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'prometheus/**'
+      - '.github/workflows/rules.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PROMETHEUS_IMAGE: quay.io/prometheus/prometheus:v3.16.0@sha256:9332054523223e2ddc18d8101799d54a4a8d823b030c53216f063a6c117773cd
+  SLOTH_IMAGE: ghcr.io/slok/sloth:v0.16.0@sha256:f0f0075b0d45c1cf684e92947508cc1d5bf573925f785f803a439b2306c8b9a5
+  BLACKBOX_IMAGE: quay.io/prometheus/blackbox-exporter:v0.29.1@sha256:ea1c7aa3ef3f307cd03e85f34abb604478ccb90b567fc690da0cd9776da76b13
+
+jobs:
+  rules:
+    name: rules and fragments
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sloth output is up to date with the SLO specs
+        run: |
+          for spec in prometheus/slo/*.yml; do
+            out="prometheus/rules/sloth/$(basename "$spec")"
+            docker run --rm -v "$PWD/prometheus/slo:/slo:ro" "$SLOTH_IMAGE" \
+              generate --default-slo-period=28d -i "/slo/$(basename "$spec")" 2>/dev/null > "$RUNNER_TEMP/gen.yml"
+            if ! diff -u "$out" "$RUNNER_TEMP/gen.yml"; then
+              echo "::error file=$out::stale: regenerate from $spec (see the header of the spec)"; exit 1
+            fi
+            echo "ok: $out matches $spec"
+          done
+
+      - name: promtool check rules
+        run: |
+          docker run --rm -v "$PWD/prometheus:/p:ro" --entrypoint promtool "$PROMETHEUS_IMAGE" \
+            check rules $(cd prometheus && find rules -name '*.yml' -not -path '*/tests/*' -printf '/p/%p ')
+
+      - name: promtool test rules (what pages, what tickets, what stays quiet)
+        run: |
+          docker run --rm -v "$PWD/prometheus:/p:ro" -w /p/rules/tests --entrypoint promtool "$PROMETHEUS_IMAGE" \
+            test rules $(cd prometheus/rules/tests && ls *_test.yml)
+
+      - name: Scrape fragments load (as included on fedora via scrape_config_files)
+        run: |
+          mkdir -p "$RUNNER_TEMP/cfg/frag" && cp prometheus/scrape/*.yml "$RUNNER_TEMP/cfg/frag/"
+          printf 'global: {scrape_interval: 30s}\nscrape_config_files: [/cfg/frag/*.yml]\n' > "$RUNNER_TEMP/cfg/prometheus.yml"
+          chmod -R a+rX "$RUNNER_TEMP/cfg"
+          docker run --rm -v "$RUNNER_TEMP/cfg:/cfg:ro" --entrypoint promtool "$PROMETHEUS_IMAGE" check config /cfg/prometheus.yml
+
+      - name: Blackbox config loads
+        run: |
+          mkdir -p "$RUNNER_TEMP/s" && printf x > "$RUNNER_TEMP/s/ns-k3s-api-hash" && printf x > "$RUNNER_TEMP/s/ns-live-api-hash"
+          chmod -R a+rX "$RUNNER_TEMP/s"
+          docker run --rm -v "$PWD/prometheus/blackbox.yml:/etc/bb.yml:ro" -v "$RUNNER_TEMP/s:/run/secrets:ro" \
+            "$BLACKBOX_IMAGE" --config.file=/etc/bb.yml --config.check

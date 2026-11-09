@@ -1,0 +1,99 @@
+# Sloth spec for the Nightscout copy on k3s (docs/slos.md, ADR 0008).
+# Generate:  sloth generate --default-slo-period=28d -i prometheus/slo -o prometheus/rules/sloth
+# CI regenerates and fails if the committed rules differ (.github/workflows/rules.yml).
+version: "prometheus/v1"
+service: "nightscout"
+labels:
+  instance: k3s-copy
+slos:
+  - name: "cgm-freshness"
+    objective: 99
+    description: "Newest CGM reading is under 10 minutes old (time-based; 30 s samples)."
+    sli:
+      events:
+        # nightscout:entry_stale:bool is 1 while the newest reading is >= 10 min old (rules/inputs.yml).
+        error_query: sum(sum_over_time(nightscout:entry_stale:bool{instance="k3s-copy"}[{{.window}}]))
+        total_query: sum(count_over_time(nightscout:entry_stale:bool{instance="k3s-copy"}[{{.window}}]))
+    alerting:
+      name: NightscoutCGMFreshnessBudgetBurn
+      labels:
+        category: freshness
+      annotations:
+        summary: "CGM readings on the k3s copy are going stale fast enough to burn the 28-day budget."
+        runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/cgm-freshness.md"
+      page_alert:
+        labels:
+          severity: page
+      ticket_alert:
+        labels:
+          severity: ticket
+
+  - name: "api-availability"
+    objective: 99.5
+    description: "Authenticated /api/v1/status.json answers 2xx with status ok, probed through each node's ingress."
+    sli:
+      events:
+        error_query: sum(sum_over_time((1 - probe_success{job="blackbox-ns-copy"})[{{.window}}:30s]))
+        total_query: sum(count_over_time(probe_success{job="blackbox-ns-copy"}[{{.window}}]))
+    alerting:
+      name: NightscoutAPIAvailabilityBudgetBurn
+      labels:
+        category: availability
+      annotations:
+        summary: "The k3s copy's API is failing probes fast enough to burn the 28-day budget."
+        runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/api-availability.md"
+      page_alert:
+        labels:
+          severity: page
+      ticket_alert:
+        labels:
+          severity: ticket
+
+  - name: "tconnectsync-poll-success"
+    objective: 99
+    description: "Tandem Source polls that succeed; failed polls and container restarts are errors."
+    sli:
+      events:
+        error_query: >-
+          (sum(increase(tconnectsync_polls_total{instance="k3s-copy",result="failure"}[{{.window}}])) or vector(0))
+          + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[{{.window}}])) or vector(0))
+        total_query: >-
+          (sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[{{.window}}])) or vector(0))
+          + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[{{.window}}])) or vector(0))
+    alerting:
+      name: TconnectsyncPollFailureBudgetBurn
+      labels:
+        category: sync
+      annotations:
+        summary: "tconnectsync on the k3s copy is failing Tandem Source polls."
+        runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/tconnectsync-polls.md"
+      page_alert:
+        labels:
+          severity: page
+      ticket_alert:
+        labels:
+          severity: ticket
+
+  - name: "pump-data-latency"
+    objective: 99
+    # T = 90 min is provisional: set from the copy-vs-live comparison due 2026-11-15.
+    description: "Pump events stored in Nightscout within 90 minutes of happening (end to end, mostly upstream)."
+    sli:
+      events:
+        error_query: >-
+          sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[{{.window}}]))
+          - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[{{.window}}]))
+        total_query: sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[{{.window}}]))
+    alerting:
+      name: PumpDataLatencyBudgetBurn
+      labels:
+        category: sync
+      annotations:
+        summary: "Pump data is reaching Nightscout late (end to end, includes Tandem Source)."
+        runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/pump-data-latency.md"
+      # Mostly upstream (Tandem's upload cadence): never page for it.
+      page_alert:
+        disable: true
+      ticket_alert:
+        labels:
+          severity: ticket

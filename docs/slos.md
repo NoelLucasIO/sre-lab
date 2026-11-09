@@ -40,6 +40,14 @@ So the SLOs are split by who can act:
 
 The copy runs `AUTOUPDATE_USE_FIXED_SLEEP=true`, `AUTOUPDATE_DEFAULT_SLEEP_SECONDS=300`; the live instance keeps the default. Expected: median latency down by roughly 10 minutes, at about 5× the Tandem Source API calls. After one week, compare the copy's latency distribution with the live instance's, then set T and decide whether to apply the change to the live instance.
 
+## Alerting (as built)
+
+- **Specs:** `prometheus/slo/nightscout.yml` (Sloth, 28-day period). **Generated rules:** `prometheus/rules/sloth/`, regenerated in CI and required to match. **Inputs and guards:** `prometheus/rules/inputs.yml`.
+- **Burn rates** (Sloth's multi-window, multi-burn-rate defaults for 28 days): page when 5 m and 1 h error ratios both exceed 13.44 × budget (or 30 m/6 h at 5.6 ×); ticket on 2 h/1 d at 2.8 × or 6 h/3 d at 1 ×. Pump latency has the ticket alert only.
+- **Guards:** `NightscoutExporterDown`, `BlackboxProbesMissing` (a blind SLO is not a green SLO), `PumpDataStale` (no tconnectsync event for 3 h), `PrometheusRuleEvaluationFailures` (Prometheus auto-updates), `Watchdog` (always firing; heartbeat for Alertmanager).
+- **Upstream discriminator:** `UpstreamCGMStale` fires when both the copy and the live instance are stale for 5 min. A sensor warm-up (~55 min) would otherwise trip the fast-burn freshness page; Alertmanager inhibits that page while `UpstreamCGMStale` fires (wired when Alertmanager is added). The budget is still spent: the SLO stays user-facing.
+- **Tested:** `prometheus/rules/tests/nightscout_test.yml` runs synthetic series through the real rules (`promtool test rules`): freshness flips at 10 min, the upstream alert needs both instances stale, a probe outage on all nodes pages within minutes, failing polls page, late pump data tickets and never pages, guards fire on time. Four deliberate rule mutations were all caught.
+
 ## Known limits
 
 - CGM freshness depends on the sensor, the phone and Dexcom Share. An upstream outage burns the freshness budget even though nothing we run failed. Because Prometheus watches the live instance too, alerts and runbooks can tell the cases apart: both stale → upstream, only the copy stale → us.
