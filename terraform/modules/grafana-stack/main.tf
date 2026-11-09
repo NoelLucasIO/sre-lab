@@ -25,6 +25,22 @@ resource "grafana_data_source" "prometheus" {
   })
 }
 
+# External Alertmanager (Prometheus implementation): its alerts and silences in Grafana's UI.
+# Grafana selects it by name in links (?alertmanager=<name>), so keep the name stable.
+resource "grafana_data_source" "alertmanager" {
+  count = var.alertmanager == null ? 0 : 1
+
+  type = "alertmanager"
+  name = var.alertmanager.name
+  uid  = var.alertmanager.uid
+  url  = var.alertmanager.url
+
+  json_data_encoded = jsonencode({
+    implementation             = "prometheus"
+    handleGrafanaManagedAlerts = false
+  })
+}
+
 resource "grafana_dashboard" "this" {
   for_each = local.dashboards
 

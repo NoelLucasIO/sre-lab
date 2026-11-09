@@ -1,5 +1,6 @@
-# Alertmanager for the sre-lab SLOs (ADR 0008). Deployed to /990/alertmanager/alertmanager.yml,
-# mounted read-only by prometheus/alertmanager.container. Routing is tested by
+# Alertmanager for the sre-lab SLOs (ADR 0008). Deployed to /990/alertmanager/config/alertmanager.yml
+# (the directory is mounted read-only by prometheus/alertmanager.container); apply with
+# `curl -X POST 127.0.0.1:9095/-/reload`. Routing is tested by
 # prometheus/alertmanager-test.sh (CI: .github/workflows/rules.yml).
 #
 #   severity=page    -> PagerDuty, severity critical (high urgency: phone/push)
@@ -43,6 +44,9 @@ receivers:
   - name: pagerduty-page
     pagerduty_configs:
       - routing_key_file: /run/secrets/pagerduty-routing-key
+        client: sre-lab Alertmanager (Grafana)
+        # LAN/VPN only, like the rest of the lab. Not --web.external-url: that also moves the API paths.
+        client_url: https://grafana.noellucas.io/alerting/groups?alertmanager=sre-lab-alertmanager
         severity: critical
         description: '{{ .CommonLabels.alertname }}: {{ .CommonAnnotations.summary }}'
         links:
@@ -56,6 +60,9 @@ receivers:
   - name: pagerduty-ticket
     pagerduty_configs:
       - routing_key_file: /run/secrets/pagerduty-routing-key
+        client: sre-lab Alertmanager (Grafana)
+        # LAN/VPN only, like the rest of the lab. Not --web.external-url: that also moves the API paths.
+        client_url: https://grafana.noellucas.io/alerting/groups?alertmanager=sre-lab-alertmanager
         severity: warning
         description: '{{ .CommonLabels.alertname }}: {{ .CommonAnnotations.summary }}'
         links:
