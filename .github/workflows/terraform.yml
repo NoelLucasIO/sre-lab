@@ -2,6 +2,8 @@
 #   PR:          static checks (GitHub-hosted) -> plan per root (self-hosted) -> change-risk gate -> sticky PR comment
 #   push main:   static checks -> plan saved on runner disk -> risk report -> apply (environment `lab`, required reviewer)
 # Plan files never leave the runner (no artifacts): this is a public repo and plan files hold raw values.
+# AWS: short-lived credentials via GitHub OIDC (plan: read-only role; apply: role trusted only for the
+# `lab` environment). The account ID is the repository variable AWS_ACCOUNT_ID.
 # Change risk: >2 destroys/replaces, or anything tagged `critical`, fails the PR unless it has the
 # `override-risk` label. On main it is report-only (job summary), so the reviewer sees it before approving.
 name: terraform
@@ -28,7 +30,11 @@ env:
   TF_IN_AUTOMATION: "1"
   TF_INPUT: "0"
   # Apply order matters: the image root before the VMs that use it.
-  ROOTS: "lab-base lab observability"
+  ROOTS: "lab-base lab observability aws"
+  # envs/aws-bootstrap (the CI roles themselves) is checked here but planned and applied only by a
+  # human: CI must not be able to change its own permissions (ADR 0009).
+  STATIC_ROOTS: "lab-base lab observability aws-bootstrap aws"
+  AWS_REGION: us-east-2
 
 jobs:
   static:
@@ -54,7 +60,7 @@ jobs:
 
       - name: terraform validate
         run: |
-          for r in $ROOTS; do
+          for r in $STATIC_ROOTS; do
             echo "::group::validate $r"
             terraform -chdir="terraform/envs/$r" init -backend=false -input=false -no-color >/dev/null
             terraform -chdir="terraform/envs/$r" validate -no-color
@@ -87,6 +93,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      id-token: write   # GitHub OIDC -> AWS role sre-lab-plan (read-only); no AWS keys stored anywhere
     concurrency:
       # Event in the key: a late PR run must not cancel main's plan (PR #28, 2026-11-09).
       group: tf-plan-${{ github.event_name }}-${{ github.ref }}
@@ -97,11 +104,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: AWS credentials (read-only plan role)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/sre-lab/sre-lab-plan
+          role-session-name: plan-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: terraform plan
         id: plan
         run: |
           set -a
-          for f in pg grafana technitium; do . "$HOME/.config/terraform/$f.env"; done
+          for f in pg grafana technitium aws; do . "$HOME/.config/terraform/$f.env"; done
           set +a
           export TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
           mkdir -p "$TF_PLUGIN_CACHE_DIR" "$HOME/plans/$GITHUB_SHA"
@@ -200,15 +214,26 @@ jobs:
     concurrency:
       group: tf-apply
       cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write   # GitHub OIDC -> AWS role sre-lab-apply, trusted only for the `lab` environment
     steps:
       - uses: actions/checkout@v4
+
+      - name: AWS credentials (apply role)
+        if: contains(format(' {0} ', needs.plan.outputs.changed), ' aws ')
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/sre-lab/sre-lab-apply
+          role-session-name: apply-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: apply saved plans
         env:
           CHANGED: ${{ needs.plan.outputs.changed }}
         run: |
           set -a
-          for f in pg grafana technitium; do . "$HOME/.config/terraform/$f.env"; done
+          for f in pg grafana technitium aws; do . "$HOME/.config/terraform/$f.env"; done
           set +a
           export TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
           dir="$HOME/plans/$GITHUB_SHA"
