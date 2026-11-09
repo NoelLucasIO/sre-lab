@@ -404,172 +404,172 @@ groups:
         budget.
       title: (ticket) {{$labels.sloth_service}} {{$labels.sloth_slo}} SLO error budget
         burn rate is too fast.
-- name: sloth-slo-sli-recordings-nightscout-tconnectsync-poll-success
+- name: sloth-slo-sli-recordings-nightscout-tconnectsync-polls
   rules:
   - record: slo:sli_error:ratio_rate5m
     expr: |
       ((sum(increase(tconnectsync_polls_total{instance="k3s-copy",result="failure"}[5m])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[5m])) or vector(0)))
       /
-      ((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[5m])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[5m])) or vector(0)))
+      (((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[5m])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[5m])) or vector(0))) > 0 or vector(1))
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
       sloth_window: 5m
   - record: slo:sli_error:ratio_rate30m
     expr: |
       ((sum(increase(tconnectsync_polls_total{instance="k3s-copy",result="failure"}[30m])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[30m])) or vector(0)))
       /
-      ((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[30m])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[30m])) or vector(0)))
+      (((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[30m])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[30m])) or vector(0))) > 0 or vector(1))
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
       sloth_window: 30m
   - record: slo:sli_error:ratio_rate1h
     expr: |
       ((sum(increase(tconnectsync_polls_total{instance="k3s-copy",result="failure"}[1h])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[1h])) or vector(0)))
       /
-      ((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[1h])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[1h])) or vector(0)))
+      (((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[1h])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[1h])) or vector(0))) > 0 or vector(1))
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
       sloth_window: 1h
   - record: slo:sli_error:ratio_rate2h
     expr: |
       ((sum(increase(tconnectsync_polls_total{instance="k3s-copy",result="failure"}[2h])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[2h])) or vector(0)))
       /
-      ((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[2h])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[2h])) or vector(0)))
+      (((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[2h])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[2h])) or vector(0))) > 0 or vector(1))
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
       sloth_window: 2h
   - record: slo:sli_error:ratio_rate6h
     expr: |
       ((sum(increase(tconnectsync_polls_total{instance="k3s-copy",result="failure"}[6h])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[6h])) or vector(0)))
       /
-      ((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[6h])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[6h])) or vector(0)))
+      (((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[6h])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[6h])) or vector(0))) > 0 or vector(1))
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
       sloth_window: 6h
   - record: slo:sli_error:ratio_rate1d
     expr: |
       ((sum(increase(tconnectsync_polls_total{instance="k3s-copy",result="failure"}[1d])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[1d])) or vector(0)))
       /
-      ((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[1d])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[1d])) or vector(0)))
+      (((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[1d])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[1d])) or vector(0))) > 0 or vector(1))
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
       sloth_window: 1d
   - record: slo:sli_error:ratio_rate3d
     expr: |
       ((sum(increase(tconnectsync_polls_total{instance="k3s-copy",result="failure"}[3d])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[3d])) or vector(0)))
       /
-      ((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[3d])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[3d])) or vector(0)))
+      (((sum(increase(tconnectsync_polls_total{instance="k3s-copy"}[3d])) or vector(0)) + (sum(increase(tconnectsync_container_restarts{instance="k3s-copy"}[3d])) or vector(0))) > 0 or vector(1))
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
       sloth_window: 3d
   - record: slo:sli_error:ratio_rate4w
     expr: |
-      sum_over_time(slo:sli_error:ratio_rate5m{sloth_id="nightscout-tconnectsync-poll-success", sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"}[4w])
+      sum_over_time(slo:sli_error:ratio_rate5m{sloth_id="nightscout-tconnectsync-polls", sloth_service="nightscout", sloth_slo="tconnectsync-polls"}[4w])
       / ignoring (sloth_window)
-      count_over_time(slo:sli_error:ratio_rate5m{sloth_id="nightscout-tconnectsync-poll-success", sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"}[4w])
+      count_over_time(slo:sli_error:ratio_rate5m{sloth_id="nightscout-tconnectsync-polls", sloth_service="nightscout", sloth_slo="tconnectsync-polls"}[4w])
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
       sloth_window: 4w
-- name: sloth-slo-meta-recordings-nightscout-tconnectsync-poll-success
+- name: sloth-slo-meta-recordings-nightscout-tconnectsync-polls
   rules:
   - record: slo:objective:ratio
     expr: vector(0.99)
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
   - record: slo:error_budget:ratio
     expr: vector(1-0.99)
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
   - record: slo:time_period:days
     expr: vector(28)
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
   - record: slo:current_burn_rate:ratio
     expr: |
-      slo:sli_error:ratio_rate5m{sloth_id="nightscout-tconnectsync-poll-success", sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"}
+      slo:sli_error:ratio_rate5m{sloth_id="nightscout-tconnectsync-polls", sloth_service="nightscout", sloth_slo="tconnectsync-polls"}
       / on(sloth_id, sloth_slo, sloth_service) group_left
-      slo:error_budget:ratio{sloth_id="nightscout-tconnectsync-poll-success", sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"}
+      slo:error_budget:ratio{sloth_id="nightscout-tconnectsync-polls", sloth_service="nightscout", sloth_slo="tconnectsync-polls"}
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
   - record: slo:period_burn_rate:ratio
     expr: |
-      slo:sli_error:ratio_rate4w{sloth_id="nightscout-tconnectsync-poll-success", sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"}
+      slo:sli_error:ratio_rate4w{sloth_id="nightscout-tconnectsync-polls", sloth_service="nightscout", sloth_slo="tconnectsync-polls"}
       / on(sloth_id, sloth_slo, sloth_service) group_left
-      slo:error_budget:ratio{sloth_id="nightscout-tconnectsync-poll-success", sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"}
+      slo:error_budget:ratio{sloth_id="nightscout-tconnectsync-polls", sloth_service="nightscout", sloth_slo="tconnectsync-polls"}
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
   - record: slo:period_error_budget_remaining:ratio
-    expr: 1 - slo:period_burn_rate:ratio{sloth_id="nightscout-tconnectsync-poll-success",
-      sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"}
+    expr: 1 - slo:period_burn_rate:ratio{sloth_id="nightscout-tconnectsync-polls",
+      sloth_service="nightscout", sloth_slo="tconnectsync-polls"}
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
   - record: sloth_slo_info
     expr: vector(1)
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-tconnectsync-poll-success
+      sloth_id: nightscout-tconnectsync-polls
       sloth_mode: cli-gen-prom
       sloth_objective: "99"
       sloth_service: nightscout
-      sloth_slo: tconnectsync-poll-success
+      sloth_slo: tconnectsync-polls
       sloth_spec: prometheus/v1
       sloth_version: v0.16.0
-- name: sloth-slo-alerts-nightscout-tconnectsync-poll-success
+- name: sloth-slo-alerts-nightscout-tconnectsync-polls
   rules:
   - alert: TconnectsyncPollFailureBudgetBurn
     expr: |
       (
-          max(slo:sli_error:ratio_rate5m{sloth_id="nightscout-tconnectsync-poll-success", sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"} > (13.44 * 0.01)) without (sloth_window)
+          max(slo:sli_error:ratio_rate5m{sloth_id="nightscout-tconnectsync-polls", sloth_service="nightscout", sloth_slo="tconnectsync-polls"} > (13.44 * 0.01)) without (sloth_window)
           and
-          max(slo:sli_error:ratio_rate1h{sloth_id="nightscout-tconnectsync-poll-success", sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"} > (13.44 * 0.01)) without (sloth_window)
+          max(slo:sli_error:ratio_rate1h{sloth_id="nightscout-tconnectsync-polls", sloth_service="nightscout", sloth_slo="tconnectsync-polls"} > (13.44 * 0.01)) without (sloth_window)
       )
       or
       (
-          max(slo:sli_error:ratio_rate30m{sloth_id="nightscout-tconnectsync-poll-success", sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"} > (5.6000000000000005 * 0.01)) without (sloth_window)
+          max(slo:sli_error:ratio_rate30m{sloth_id="nightscout-tconnectsync-polls", sloth_service="nightscout", sloth_slo="tconnectsync-polls"} > (5.6000000000000005 * 0.01)) without (sloth_window)
           and
-          max(slo:sli_error:ratio_rate6h{sloth_id="nightscout-tconnectsync-poll-success", sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"} > (5.6000000000000005 * 0.01)) without (sloth_window)
+          max(slo:sli_error:ratio_rate6h{sloth_id="nightscout-tconnectsync-polls", sloth_service="nightscout", sloth_slo="tconnectsync-polls"} > (5.6000000000000005 * 0.01)) without (sloth_window)
       )
     labels:
       category: sync
@@ -583,15 +583,15 @@ groups:
   - alert: TconnectsyncPollFailureBudgetBurn
     expr: |
       (
-          max(slo:sli_error:ratio_rate2h{sloth_id="nightscout-tconnectsync-poll-success", sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"} > (2.8000000000000003 * 0.01)) without (sloth_window)
+          max(slo:sli_error:ratio_rate2h{sloth_id="nightscout-tconnectsync-polls", sloth_service="nightscout", sloth_slo="tconnectsync-polls"} > (2.8000000000000003 * 0.01)) without (sloth_window)
           and
-          max(slo:sli_error:ratio_rate1d{sloth_id="nightscout-tconnectsync-poll-success", sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"} > (2.8000000000000003 * 0.01)) without (sloth_window)
+          max(slo:sli_error:ratio_rate1d{sloth_id="nightscout-tconnectsync-polls", sloth_service="nightscout", sloth_slo="tconnectsync-polls"} > (2.8000000000000003 * 0.01)) without (sloth_window)
       )
       or
       (
-          max(slo:sli_error:ratio_rate6h{sloth_id="nightscout-tconnectsync-poll-success", sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"} > (0.9333333333333333 * 0.01)) without (sloth_window)
+          max(slo:sli_error:ratio_rate6h{sloth_id="nightscout-tconnectsync-polls", sloth_service="nightscout", sloth_slo="tconnectsync-polls"} > (0.9333333333333333 * 0.01)) without (sloth_window)
           and
-          max(slo:sli_error:ratio_rate3d{sloth_id="nightscout-tconnectsync-poll-success", sloth_service="nightscout", sloth_slo="tconnectsync-poll-success"} > (0.9333333333333333 * 0.01)) without (sloth_window)
+          max(slo:sli_error:ratio_rate3d{sloth_id="nightscout-tconnectsync-polls", sloth_service="nightscout", sloth_slo="tconnectsync-polls"} > (0.9333333333333333 * 0.01)) without (sloth_window)
       )
     labels:
       category: sync
@@ -602,172 +602,172 @@ groups:
       summary: tconnectsync on the k3s copy is failing Tandem Source polls.
       title: (ticket) {{$labels.sloth_service}} {{$labels.sloth_slo}} SLO error budget
         burn rate is too fast.
-- name: sloth-slo-sli-recordings-nightscout-pump-data-latency
+- name: sloth-slo-sli-recordings-nightscout-pump-latency
   rules:
   - record: slo:sli_error:ratio_rate5m
     expr: |
-      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[5m])) - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[5m])))
+      ((sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[5m])) - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[5m]))) or vector(0))
       /
-      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[5m])))
+      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[5m])) > 0 or vector(1))
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
       sloth_window: 5m
   - record: slo:sli_error:ratio_rate30m
     expr: |
-      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[30m])) - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[30m])))
+      ((sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[30m])) - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[30m]))) or vector(0))
       /
-      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[30m])))
+      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[30m])) > 0 or vector(1))
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
       sloth_window: 30m
   - record: slo:sli_error:ratio_rate1h
     expr: |
-      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[1h])) - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[1h])))
+      ((sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[1h])) - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[1h]))) or vector(0))
       /
-      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[1h])))
+      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[1h])) > 0 or vector(1))
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
       sloth_window: 1h
   - record: slo:sli_error:ratio_rate2h
     expr: |
-      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[2h])) - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[2h])))
+      ((sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[2h])) - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[2h]))) or vector(0))
       /
-      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[2h])))
+      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[2h])) > 0 or vector(1))
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
       sloth_window: 2h
   - record: slo:sli_error:ratio_rate6h
     expr: |
-      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[6h])) - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[6h])))
+      ((sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[6h])) - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[6h]))) or vector(0))
       /
-      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[6h])))
+      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[6h])) > 0 or vector(1))
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
       sloth_window: 6h
   - record: slo:sli_error:ratio_rate1d
     expr: |
-      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[1d])) - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[1d])))
+      ((sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[1d])) - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[1d]))) or vector(0))
       /
-      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[1d])))
+      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[1d])) > 0 or vector(1))
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
       sloth_window: 1d
   - record: slo:sli_error:ratio_rate3d
     expr: |
-      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[3d])) - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[3d])))
+      ((sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[3d])) - sum(increase(nightscout_pump_event_latency_seconds_bucket{instance="k3s-copy",le="5400"}[3d]))) or vector(0))
       /
-      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[3d])))
+      (sum(increase(nightscout_pump_event_latency_seconds_count{instance="k3s-copy"}[3d])) > 0 or vector(1))
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
       sloth_window: 3d
   - record: slo:sli_error:ratio_rate4w
     expr: |
-      sum_over_time(slo:sli_error:ratio_rate5m{sloth_id="nightscout-pump-data-latency", sloth_service="nightscout", sloth_slo="pump-data-latency"}[4w])
+      sum_over_time(slo:sli_error:ratio_rate5m{sloth_id="nightscout-pump-latency", sloth_service="nightscout", sloth_slo="pump-latency"}[4w])
       / ignoring (sloth_window)
-      count_over_time(slo:sli_error:ratio_rate5m{sloth_id="nightscout-pump-data-latency", sloth_service="nightscout", sloth_slo="pump-data-latency"}[4w])
+      count_over_time(slo:sli_error:ratio_rate5m{sloth_id="nightscout-pump-latency", sloth_service="nightscout", sloth_slo="pump-latency"}[4w])
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
       sloth_window: 4w
-- name: sloth-slo-meta-recordings-nightscout-pump-data-latency
+- name: sloth-slo-meta-recordings-nightscout-pump-latency
   rules:
   - record: slo:objective:ratio
     expr: vector(0.99)
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
   - record: slo:error_budget:ratio
     expr: vector(1-0.99)
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
   - record: slo:time_period:days
     expr: vector(28)
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
   - record: slo:current_burn_rate:ratio
     expr: |
-      slo:sli_error:ratio_rate5m{sloth_id="nightscout-pump-data-latency", sloth_service="nightscout", sloth_slo="pump-data-latency"}
+      slo:sli_error:ratio_rate5m{sloth_id="nightscout-pump-latency", sloth_service="nightscout", sloth_slo="pump-latency"}
       / on(sloth_id, sloth_slo, sloth_service) group_left
-      slo:error_budget:ratio{sloth_id="nightscout-pump-data-latency", sloth_service="nightscout", sloth_slo="pump-data-latency"}
+      slo:error_budget:ratio{sloth_id="nightscout-pump-latency", sloth_service="nightscout", sloth_slo="pump-latency"}
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
   - record: slo:period_burn_rate:ratio
     expr: |
-      slo:sli_error:ratio_rate4w{sloth_id="nightscout-pump-data-latency", sloth_service="nightscout", sloth_slo="pump-data-latency"}
+      slo:sli_error:ratio_rate4w{sloth_id="nightscout-pump-latency", sloth_service="nightscout", sloth_slo="pump-latency"}
       / on(sloth_id, sloth_slo, sloth_service) group_left
-      slo:error_budget:ratio{sloth_id="nightscout-pump-data-latency", sloth_service="nightscout", sloth_slo="pump-data-latency"}
+      slo:error_budget:ratio{sloth_id="nightscout-pump-latency", sloth_service="nightscout", sloth_slo="pump-latency"}
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
   - record: slo:period_error_budget_remaining:ratio
-    expr: 1 - slo:period_burn_rate:ratio{sloth_id="nightscout-pump-data-latency",
-      sloth_service="nightscout", sloth_slo="pump-data-latency"}
+    expr: 1 - slo:period_burn_rate:ratio{sloth_id="nightscout-pump-latency", sloth_service="nightscout",
+      sloth_slo="pump-latency"}
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
   - record: sloth_slo_info
     expr: vector(1)
     labels:
       instance: k3s-copy
-      sloth_id: nightscout-pump-data-latency
+      sloth_id: nightscout-pump-latency
       sloth_mode: cli-gen-prom
       sloth_objective: "99"
       sloth_service: nightscout
-      sloth_slo: pump-data-latency
+      sloth_slo: pump-latency
       sloth_spec: prometheus/v1
       sloth_version: v0.16.0
-- name: sloth-slo-alerts-nightscout-pump-data-latency
+- name: sloth-slo-alerts-nightscout-pump-latency
   rules:
   - alert: PumpDataLatencyBudgetBurn
     expr: |
       (
-          max(slo:sli_error:ratio_rate2h{sloth_id="nightscout-pump-data-latency", sloth_service="nightscout", sloth_slo="pump-data-latency"} > (2.8000000000000003 * 0.01)) without (sloth_window)
+          max(slo:sli_error:ratio_rate2h{sloth_id="nightscout-pump-latency", sloth_service="nightscout", sloth_slo="pump-latency"} > (2.8000000000000003 * 0.01)) without (sloth_window)
           and
-          max(slo:sli_error:ratio_rate1d{sloth_id="nightscout-pump-data-latency", sloth_service="nightscout", sloth_slo="pump-data-latency"} > (2.8000000000000003 * 0.01)) without (sloth_window)
+          max(slo:sli_error:ratio_rate1d{sloth_id="nightscout-pump-latency", sloth_service="nightscout", sloth_slo="pump-latency"} > (2.8000000000000003 * 0.01)) without (sloth_window)
       )
       or
       (
-          max(slo:sli_error:ratio_rate6h{sloth_id="nightscout-pump-data-latency", sloth_service="nightscout", sloth_slo="pump-data-latency"} > (0.9333333333333333 * 0.01)) without (sloth_window)
+          max(slo:sli_error:ratio_rate6h{sloth_id="nightscout-pump-latency", sloth_service="nightscout", sloth_slo="pump-latency"} > (0.9333333333333333 * 0.01)) without (sloth_window)
           and
-          max(slo:sli_error:ratio_rate3d{sloth_id="nightscout-pump-data-latency", sloth_service="nightscout", sloth_slo="pump-data-latency"} > (0.9333333333333333 * 0.01)) without (sloth_window)
+          max(slo:sli_error:ratio_rate3d{sloth_id="nightscout-pump-latency", sloth_service="nightscout", sloth_slo="pump-latency"} > (0.9333333333333333 * 0.01)) without (sloth_window)
       )
     labels:
       category: sync
