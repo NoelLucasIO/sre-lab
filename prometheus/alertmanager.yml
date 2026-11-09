@@ -1,0 +1,69 @@
+# Alertmanager for the sre-lab SLOs (ADR 0008). Deployed to /990/alertmanager/alertmanager.yml,
+# mounted read-only by prometheus/alertmanager.container. Routing is tested by
+# prometheus/alertmanager-test.sh (CI: .github/workflows/rules.yml).
+#
+#   severity=page    -> PagerDuty, severity critical (high urgency: phone/push)
+#   severity=ticket  -> PagerDuty, severity warning  (low urgency with "use alert severity")
+#   info / none      -> nowhere (UpstreamCGMStale is used only to inhibit; Watchdog is the heartbeat)
+# The PagerDuty Events API v2 routing key is a Podman secret mounted as a file; it is never in
+# this file or the repo.
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: pagerduty-ticket          # anything unexpected still reaches a human, at low urgency
+  group_by: [alertname, sloth_slo, instance, severity]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: ['alertname="Watchdog"']
+      receiver: blackhole             # heartbeat target to come (external dead-man's switch)
+    - matchers: ['severity="page"']
+      receiver: pagerduty-page
+      repeat_interval: 1h
+    - matchers: ['severity="ticket"']
+      receiver: pagerduty-ticket
+      repeat_interval: 24h
+    - matchers: ['severity=~"info|none"']
+      receiver: blackhole
+
+inhibit_rules:
+  # Sensor warm-up, phone or Dexcom Share: both instances stale, so not ours. The budget is still
+  # spent (the SLO stays user-facing), but nobody gets paged for a sensor change.
+  - source_matchers: ['alertname="UpstreamCGMStale"']
+    target_matchers: ['alertname="NightscoutCGMFreshnessBudgetBurn"', 'severity="page"']
+    equal: [instance]
+  # A page already covers the same SLO: drop its ticket.
+  - source_matchers: ['severity="page"']
+    target_matchers: ['severity="ticket"']
+    equal: [alertname, sloth_slo, instance]
+
+receivers:
+  - name: pagerduty-page
+    pagerduty_configs:
+      - routing_key_file: /run/secrets/pagerduty-routing-key
+        severity: critical
+        description: '{{ .CommonLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+        links:
+          - href: '{{ .CommonAnnotations.runbook_url }}'
+            text: Runbook
+        details:
+          slo: '{{ .CommonLabels.sloth_slo }}'
+          instance: '{{ .CommonLabels.instance }}'
+          severity: '{{ .CommonLabels.severity }}'
+          firing: '{{ .Alerts.Firing | len }}'
+  - name: pagerduty-ticket
+    pagerduty_configs:
+      - routing_key_file: /run/secrets/pagerduty-routing-key
+        severity: warning
+        description: '{{ .CommonLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+        links:
+          - href: '{{ .CommonAnnotations.runbook_url }}'
+            text: Runbook
+        details:
+          slo: '{{ .CommonLabels.sloth_slo }}'
+          instance: '{{ .CommonLabels.instance }}'
+          severity: '{{ .CommonLabels.severity }}'
+          firing: '{{ .Alerts.Firing | len }}'
+  - name: blackhole

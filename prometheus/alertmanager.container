@@ -1,0 +1,34 @@
+# ~/.config/containers/systemd/alertmanager.container  (rootless, user nlucas, linger)
+# Alertmanager for the sre-lab SLO alerts (ADR 0008): routes page/ticket to PagerDuty.
+[Unit]
+Description=Alertmanager (sre-lab)
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=alertmanager
+Image=quay.io/prometheus/alertmanager:v0.34.2@sha256:39d8bb3966c694a124428a3a88fbcffd40bd069129ecd47c059f8a3f17c55f3b
+# Host network: Prometheus (host network) reaches it on 127.0.0.1:9095; PagerDuty over HTTPS.
+# Not the default 9093: akvorado's Kafka KRaft controller listens on 127.0.0.1:9093 (host network).
+Network=host
+# Single instance: no gossip cluster.
+Exec=--config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager --web.listen-address=127.0.0.1:9095 --cluster.listen-address=
+Volume=/990/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro,Z
+# Silences and notification log survive restarts; :U gives the directory to the container's user.
+Volume=/990/alertmanager/data:/alertmanager:Z,U
+Secret=pagerduty-routing-key,type=mount,uid=65534,mode=0400
+ReadOnly=true
+NoNewPrivileges=true
+DropCapability=ALL
+HealthCmd=["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9095/-/healthy"]
+HealthInterval=60s
+HealthStartPeriod=20s
+HealthOnFailure=kill
+
+[Service]
+ExecStartPre=/usr/bin/mountpoint -q /990
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
