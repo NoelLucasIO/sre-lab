@@ -7,8 +7,8 @@ is a Nightscout + tconnectsync stack, so every SLO, alert and drill measures rea
 |---|---|---|
 | 1 | Terraform modules, remote state with enforced locking, policy-as-code | **Done** (2026-11-05) |
 | 2 | CI/CD: plan on PR, approval gate, change-risk checks, automatic rollback | **Done** (2026-11-06) |
-| 3 | SLIs/SLOs, multi-window burn-rate alerts, on-call routing, runbooks | **Alerting live** (2026-11-09); tuning week and SLO dashboard in progress |
-| 4 | AWS via Terraform, offsite backups, timed DR drill, game day, postmortem | Planned |
+| 3 | SLIs/SLOs, multi-window burn-rate alerts, on-call routing, runbooks | **Live** (2026-11-09); alert-tuning week in progress |
+| 4 | AWS via Terraform, offsite backups, timed DR drill, game day, postmortem | **In progress**: AWS foundation done (2026-11-09); backups next |
 
 ## Layout
 
@@ -28,7 +28,8 @@ policy/               Custom Checkov policies + their self-test
 postgres/             Terraform state database bootstrap
 prometheus/           SLO specs (Sloth), generated + hand-written rules and their tests, scrape fragments,
                       Blackbox and Alertmanager config, quadlets for the monitoring side
-terraform/envs/       Root modules: lab (k3s VMs + DNS), lab-base (cloud images), observability (Grafana), prod-lab
+terraform/envs/       Root modules: lab (k3s VMs + DNS), lab-base (cloud images), observability (Grafana + SLO
+                      dashboard), aws (backup bucket, budget), aws-bootstrap (GitHub OIDC trust; human-applied), prod-lab
 terraform/lock-test/  Proof that state locking excludes a second writer
 ```
 
@@ -100,6 +101,29 @@ terraform/lock-test/  Proof that state locking excludes a second writer
   An external dead man's switch (healthchecks.io) pages if the monitoring stack itself goes silent.
 - **Runbooks that work:** one per alert, starting with "upstream or us?". Every command was run
   before merge, which caught two that would have failed during an incident.
+- **Urgency that does not depend on a vendor plan:** pages and tickets go to separate PagerDuty
+  services, the ticket service fixed at low urgency, so a lapsed trial feature cannot turn a ticket
+  into a 3 a.m. call.
+- **SLO dashboard as code:** error budgets, burn rates, firing alerts and copy-vs-live SLIs in one
+  Grafana dashboard managed through the Phase 1 `grafana-stack` module.
+
+## Phase 4 evidence (in progress)
+
+- **AWS with zero long-lived CI credentials:** a dedicated account; root locked behind two hardware
+  keys with no access keys; people sign in through IAM Identity Center with 1-hour sessions. CI
+  exchanges GitHub's OIDC token for short-lived credentials: a read-only role for every plan and the
+  nightly drift check, and an apply role trusted only for the approval-gated `lab` environment,
+  scoped to the two things it manages and explicitly denied reading or deleting backups.
+- **CI cannot widen its own permissions:** the OIDC provider and the roles live in a separate root
+  applied only by a human; CI lints it on every PR and drift-checks it nightly but cannot apply it
+  (ADR 0009).
+- **Trust bound to immutable IDs:** the first CI run was denied because GitHub now issues
+  `repo:OWNER@ID/REPO@ID` subjects for new repositories; the trust policies match the numeric owner
+  and repository IDs, so a recreated repository with the same name cannot assume the roles.
+- **Offsite target and cost guardrail, Terraform only:** an encrypted, versioned backup bucket
+  (public access blocked, TLS required, `prevent_destroy`; Glacier after 30 days, expiry after 365)
+  and a $5 monthly budget that excludes credits, so it alerts on real spend. Checkov now runs all
+  built-in policies: 95 pass, 4 skips each justified inline.
 
 ## Decisions
 
@@ -107,7 +131,8 @@ terraform/lock-test/  Proof that state locking excludes a second writer
   S3 lock primitive on Garage, found it silently no-ops, moved state locking to Postgres.
 - [ADR 0002: Separate state for long-lived artifacts](docs/decisions/0002-state-layering.md)
 - [ADR 0003: Policy-as-code layers](docs/decisions/0003-policy-as-code.md): built-in Checkov
-  policies evaluated 0 checks here; custom policies are tested against violating fixtures.
+  policies evaluated 0 checks on the libvirt/Grafana/DNS code; custom policies are tested against
+  violating fixtures. (The AWS roots now get the full built-in set.)
 - [ADR 0004: Observability config gets its own state](docs/decisions/0004-state-split.md): VM rebuilds
   can no longer reach the shared Prometheus data source.
 - [ADR 0005: Self-hosted runner trust boundary](docs/decisions/0005-runner-trust-boundary.md): what
@@ -118,6 +143,8 @@ terraform/lock-test/  Proof that state locking excludes a second writer
   Nightscout copy on k3s, digest pinning, scoped deploy access, and the rollback test result.
 - [ADR 0008: SLO monitoring placement](docs/decisions/0008-slo-monitoring-placement.md): SLOs
   evaluated outside the cluster on fedora's Prometheus; the repo owns only its rule and scrape fragments.
+- [ADR 0009: AWS account and CI trust](docs/decisions/0009-aws-account-and-ci-trust.md): Paid plan
+  so backups survive, OIDC roles split by what a job can do, and a trust anchor CI cannot apply.
 
 ## Host
 
