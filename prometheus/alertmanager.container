@@ -19,6 +19,7 @@ Volume=/990/alertmanager/config:/etc/alertmanager:ro,Z
 # Silences and notification log survive restarts; :U gives the directory to the container's user.
 Volume=/990/alertmanager/data:/alertmanager:Z,U
 Secret=pagerduty-routing-key,type=mount,uid=65534,mode=0400
+Secret=healthchecks-watchdog-url,type=mount,uid=65534,mode=0400
 ReadOnly=true
 NoNewPrivileges=true
 DropCapability=ALL

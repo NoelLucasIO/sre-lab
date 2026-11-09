@@ -5,9 +5,10 @@
 #
 #   severity=page    -> PagerDuty, severity critical (high urgency: phone/push)
 #   severity=ticket  -> PagerDuty, severity warning  (low urgency with "use alert severity")
-#   info / none      -> nowhere (UpstreamCGMStale is used only to inhibit; Watchdog is the heartbeat)
-# The PagerDuty Events API v2 routing key is a Podman secret mounted as a file; it is never in
-# this file or the repo.
+#   Watchdog         -> healthchecks.io ping every minute (external dead man's switch)
+#   info / none      -> nowhere (UpstreamCGMStale is used only to inhibit)
+# The PagerDuty Events API v2 routing key and the healthchecks.io ping URL are Podman secrets
+# mounted as files; neither is in this file or the repo.
 global:
   resolve_timeout: 5m
 
@@ -18,8 +19,14 @@ route:
   group_interval: 5m
   repeat_interval: 4h
   routes:
+    # Dead man's switch: Watchdog always fires, so healthchecks.io gets a ping every minute. If the
+    # pings stop (fedora, Prometheus, Alertmanager, power or network down), healthchecks.io alerts
+    # from outside the lab after 5 min period + 5 min grace.
     - matchers: ['alertname="Watchdog"']
-      receiver: blackhole             # heartbeat target to come (external dead-man's switch)
+      receiver: heartbeat
+      group_wait: 0s
+      group_interval: 1m
+      repeat_interval: 1m
     - matchers: ['severity="page"']
       receiver: pagerduty-page
       repeat_interval: 1h
@@ -73,4 +80,10 @@ receivers:
           instance: '{{ .CommonLabels.instance }}'
           severity: '{{ .CommonLabels.severity }}'
           firing: '{{ .Alerts.Firing | len }}'
+  - name: heartbeat
+    webhook_configs:
+      - url_file: /run/secrets/healthchecks-watchdog-url   # https://hc-ping.com/<uuid>: the UUID is the credential
+        send_resolved: false
+        max_alerts: 1
+        timeout: 10s
   - name: blackhole
