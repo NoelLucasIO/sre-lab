@@ -8,10 +8,7 @@
 name: rules
 
 on:
-  pull_request:
-    paths:
-      - 'prometheus/**'
-      - '.github/workflows/rules.yml'
+  pull_request:   # every PR: these checks are required on main
   push:
     branches: [main]
     paths:

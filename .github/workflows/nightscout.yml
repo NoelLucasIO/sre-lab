@@ -7,12 +7,7 @@
 name: nightscout
 
 on:
-  pull_request:
-    paths:
-      - 'k8s/nightscout/**'
-      - 'ci/nightscout/**'
-      - 'ci/install-kubectl.sh'
-      - '.github/workflows/nightscout.yml'
+  pull_request:   # every PR: these checks are required on main
   push:
     branches: [main]
     paths:

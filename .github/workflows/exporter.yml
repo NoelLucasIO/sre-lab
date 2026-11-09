@@ -6,10 +6,7 @@
 name: exporter
 
 on:
-  pull_request:
-    paths:
-      - 'exporter/**'
-      - '.github/workflows/exporter.yml'
+  pull_request:   # every PR: these checks are required on main
   push:
     branches: [main]
     paths:
