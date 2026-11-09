@@ -3,12 +3,13 @@
 # `curl -X POST 127.0.0.1:9095/-/reload`. Routing is tested by
 # prometheus/alertmanager-test.sh (CI: .github/workflows/rules.yml).
 #
-#   severity=page    -> PagerDuty, severity critical (high urgency: phone/push)
-#   severity=ticket  -> PagerDuty, severity warning  (low urgency with "use alert severity")
+#   severity=page    -> PagerDuty service sre-lab-nightscout, severity critical (high urgency)
+#   severity=ticket  -> PagerDuty service sre-lab-tickets, urgency fixed Low (email). Urgency comes
+#                       from routing, not from PagerDuty's severity-based urgency (a plan feature).
 #   Watchdog         -> healthchecks.io ping every minute (external dead man's switch)
 #   info / none      -> nowhere (UpstreamCGMStale is used only to inhibit)
-# The PagerDuty Events API v2 routing key and the healthchecks.io ping URL are Podman secrets
-# mounted as files; neither is in this file or the repo.
+# The two PagerDuty Events API v2 routing keys and the healthchecks.io ping URL are Podman
+# secrets mounted as files; none is in this file or the repo.
 global:
   resolve_timeout: 5m
 
@@ -66,7 +67,7 @@ receivers:
           firing: '{{ .Alerts.Firing | len }}'
   - name: pagerduty-ticket
     pagerduty_configs:
-      - routing_key_file: /run/secrets/pagerduty-routing-key
+      - routing_key_file: /run/secrets/pagerduty-ticket-routing-key
         client: sre-lab Alertmanager (Grafana)
         # LAN/VPN only, like the rest of the lab. Not --web.external-url: that also moves the API paths.
         client_url: https://grafana.noellucas.io/alerting/groups?alertmanager=sre-lab-alertmanager
