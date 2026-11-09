@@ -5,11 +5,7 @@
 name: k3s
 
 on:
-  pull_request:
-    paths:
-      - 'ansible/**'
-      - 'ci/install-kubectl.sh'
-      - '.github/workflows/k3s.yml'
+  pull_request:   # every PR: these checks are required on main
   push:
     branches: [main]
     paths:

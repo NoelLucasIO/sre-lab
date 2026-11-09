@@ -8,15 +8,7 @@ name: terraform
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
-    paths:
-      - 'terraform/**'
-      - 'policy/**'
-      - 'keys/**'          # baked into VM cloud-init by envs/lab
-      - 'ci/risk-check*'
-      - '.tflint.hcl'
-      - '.checkov.yaml'
-      - '.github/workflows/terraform.yml'
+    types: [opened, synchronize, reopened, labeled, unlabeled]  # every PR: these checks are required on main
   push:
     branches: [main]
     paths:
@@ -96,7 +88,8 @@ jobs:
       contents: read
       pull-requests: write
     concurrency:
-      group: tf-plan-${{ github.ref }}
+      # Event in the key: a late PR run must not cancel main's plan (PR #28, 2026-11-09).
+      group: tf-plan-${{ github.event_name }}-${{ github.ref }}
       cancel-in-progress: true
     outputs:
       changed: ${{ steps.plan.outputs.changed }}

@@ -46,14 +46,18 @@
   "templating": {
     "list": [
       {
-        "current": {},
+        "current": {
+          "selected": true,
+          "text": "prometheus",
+          "value": "bg14884efuy9sd"
+        },
         "includeAll": false,
         "label": "Datasource",
         "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
-        "regex": "",
+        "regex": "/^prometheus$/",
         "type": "datasource"
       }
     ]
