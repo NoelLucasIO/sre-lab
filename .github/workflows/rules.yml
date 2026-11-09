@@ -1,7 +1,8 @@
 # sre-lab: Prometheus rules and fragments for fedora's Prometheus (ADR 0008)
 #   Sloth output is regenerated and must match what is committed; every rule file passes
 #   `promtool check rules`; the unit tests in prometheus/rules/tests pass; the scrape fragments
-#   and the Blackbox config load with the same tool versions that run on fedora.
+#   and the Blackbox config load with the same tool versions that run on fedora; Alertmanager's
+#   config passes amtool and routes every alert class to the intended receiver.
 #   fedora's Prometheus auto-updates (ADR 0008): bump PROMETHEUS_IMAGE when it does, so these
 #   checks keep testing the version that actually evaluates the rules.
 name: rules
@@ -25,6 +26,7 @@ env:
   PROMETHEUS_IMAGE: quay.io/prometheus/prometheus:v3.16.0@sha256:9332054523223e2ddc18d8101799d54a4a8d823b030c53216f063a6c117773cd
   SLOTH_IMAGE: ghcr.io/slok/sloth:v0.16.0@sha256:f0f0075b0d45c1cf684e92947508cc1d5bf573925f785f803a439b2306c8b9a5
   BLACKBOX_IMAGE: quay.io/prometheus/blackbox-exporter:v0.29.1@sha256:ea1c7aa3ef3f307cd03e85f34abb604478ccb90b567fc690da0cd9776da76b13
+  ALERTMANAGER_IMAGE: quay.io/prometheus/alertmanager:v0.34.2@sha256:39d8bb3966c694a124428a3a88fbcffd40bd069129ecd47c059f8a3f17c55f3b
 
 jobs:
   rules:
@@ -68,3 +70,8 @@ jobs:
           chmod -R a+rX "$RUNNER_TEMP/s"
           docker run --rm -v "$PWD/prometheus/blackbox.yml:/etc/bb.yml:ro" -v "$RUNNER_TEMP/s:/run/secrets:ro" \
             "$BLACKBOX_IMAGE" --config.file=/etc/bb.yml --config.check
+
+      - name: Alertmanager config and routing (which alert reaches which receiver)
+        run: |
+          AMTOOL="docker run --rm -v $PWD/prometheus/alertmanager.yml:/c.yml:ro --entrypoint amtool $ALERTMANAGER_IMAGE" \
+            prometheus/alertmanager-test.sh /c.yml
