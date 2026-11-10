@@ -150,3 +150,130 @@ resource "aws_iam_role_policy" "apply" {
   role   = aws_iam_role.apply.id
   policy = data.aws_iam_policy_document.apply.json
 }
+
+# ---------------------------------------------------------------------------------------------
+# Backup roles (ADR 0010). Scheduled jobs run them, so their environments have no reviewer;
+# each environment is limited to `main` by its deployment-branch rule, and each role reaches only
+# the backup prefix. Writer and reader are separate: the job that writes can never read health
+# data back, and the job that reads (on a GitHub-hosted runner) can never change a backup.
+# ---------------------------------------------------------------------------------------------
+locals {
+  backup_objects_arn = "${local.backup_bucket_arn}/${var.backup_prefix}*"
+}
+
+data "aws_iam_policy_document" "backup_writer_trust" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "${local.oidc_host}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "${local.oidc_host}:sub"
+      values   = ["${local.sub_prefix}:environment:${var.backup_environment}"]
+    }
+  }
+}
+
+resource "aws_iam_role" "backup_writer" {
+  name                 = "sre-lab-backup-writer"
+  path                 = "/sre-lab/"
+  description          = "GitHub Actions nightly offsite copy: PutObject on the backup prefix only"
+  assume_role_policy   = data.aws_iam_policy_document.backup_writer_trust.json
+  max_session_duration = 3600
+}
+
+data "aws_iam_policy_document" "backup_writer" {
+  statement {
+    sid       = "PutNewDumps"
+    actions   = ["s3:PutObject"]
+    resources = [local.backup_objects_arn]
+  }
+
+  statement {
+    sid    = "NoReadsNoDeletesNoObjectSettings"
+    effect = "Deny"
+    actions = [
+      "s3:GetObject*",
+      "s3:DeleteObject*",
+      "s3:RestoreObject",
+      "s3:PutObjectAcl",
+      "s3:PutObjectVersionAcl",
+      "s3:PutObjectRetention",
+      "s3:PutObjectLegalHold",
+    ]
+    resources = [local.backup_bucket_arn, "${local.backup_bucket_arn}/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "backup_writer" {
+  name   = "put-backups"
+  role   = aws_iam_role.backup_writer.id
+  policy = data.aws_iam_policy_document.backup_writer.json
+}
+
+data "aws_iam_policy_document" "restore_reader_trust" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "${local.oidc_host}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "${local.oidc_host}:sub"
+      values   = ["${local.sub_prefix}:environment:${var.restore_environment}"]
+    }
+  }
+}
+
+resource "aws_iam_role" "restore_reader" {
+  name                 = "sre-lab-restore-reader"
+  path                 = "/sre-lab/"
+  description          = "GitHub Actions weekly restore test: read the backup prefix only"
+  assume_role_policy   = data.aws_iam_policy_document.restore_reader_trust.json
+  max_session_duration = 3600
+}
+
+data "aws_iam_policy_document" "restore_reader" {
+  statement {
+    sid       = "ListDumps"
+    actions   = ["s3:ListBucket"]
+    resources = [local.backup_bucket_arn]
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values   = ["${var.backup_prefix}*"]
+    }
+  }
+
+  statement {
+    sid       = "ReadDumps"
+    actions   = ["s3:GetObject", "s3:GetObjectAttributes"]
+    resources = [local.backup_objects_arn]
+  }
+
+  statement {
+    sid       = "ReadOnly"
+    effect    = "Deny"
+    actions   = ["s3:PutObject*", "s3:DeleteObject*", "s3:RestoreObject", "s3:PutBucket*", "s3:DeleteBucket*"]
+    resources = [local.backup_bucket_arn, "${local.backup_bucket_arn}/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "restore_reader" {
+  name   = "read-backups"
+  role   = aws_iam_role.restore_reader.id
+  policy = data.aws_iam_policy_document.restore_reader.json
+}

@@ -1,0 +1,12 @@
+# Nightly at 02:30 local. The offsite copy (`backup` workflow) runs at 07:47 UTC: 02:47 EST,
+# 03:47 EDT. Persistent: a run missed while fedora was down happens at the next boot.
+[Unit]
+Description=Nightly Nightscout backup (sre-lab)
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 America/New_York
+Persistent=true
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

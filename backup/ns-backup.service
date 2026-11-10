@@ -1,0 +1,14 @@
+# Nightscout backup, stage 1 (ADR 0010). Install as nlucas:
+#   install -m 0755 backup/ns-backup.sh ~/.local/bin/ns-backup
+#   install -m 0644 backup/ns-backup.service backup/ns-backup.timer ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now ns-backup.timer
+[Unit]
+Description=Nightscout backup: mongodump of live into Garage (sre-lab)
+Wants=garage.service
+After=garage.service nightscout-mongo.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/ns-backup
+TimeoutStartSec=15min
+Nice=10

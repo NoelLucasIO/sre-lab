@@ -78,3 +78,5 @@ Configs are mounted as **directories**, so a reload sees a replaced file. (A sin
 | `prometheus/blackbox.yml` | `/990/blackbox/blackbox.yml` (directory mounted) |
 | `prometheus/alertmanager.yml` | `/990/alertmanager/config/alertmanager.yml` (directory mounted); apply with `curl -X POST 127.0.0.1:9095/-/reload` |
 | `prometheus/*.container` | `~/.config/containers/systemd/` |
+| `backup/ns-backup.sh` | `~/.local/bin/ns-backup` ([backups](backups.md)) |
+| `backup/ns-backup.service`, `backup/ns-backup.timer` | `~/.config/systemd/user/` |

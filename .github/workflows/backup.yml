@@ -1,0 +1,146 @@
+# sre-lab: Nightscout backups (Phase 4, ADR 0010). Stage 1 (mongodump into Garage) is
+# ns-backup.timer on fedora; this workflow is everything after it.
+#   scripts  every PR and push: shellcheck, plus a real dump -> restore round trip on a synthetic
+#            database, including the cases that must fail. No secrets, no lab access.
+#   offsite  nightly: newest Garage dump -> S3, on the fedora runner. Garage read-only key; AWS role
+#            sre-lab-backup-writer (PutObject on the prefix only) via OIDC. No long-lived AWS keys.
+#   restore  weekly: newest S3 dump -> throwaway Mongo on a GitHub-hosted runner, role
+#            sre-lab-restore-reader; every count must check out. Proves the offsite copy restores
+#            with nothing from the lab (postmortem 2026-11-10: fedora can disappear).
+# Each scheduled job pings its own healthchecks.io check (secret HC_PING_URL in its environment).
+name: backup
+
+on:
+  pull_request:   # every PR: required checks on main must always report
+  push:
+    branches: [main]
+    paths:
+      - 'backup/**'
+      - 'garage/backup-keys.sh'
+      - '.github/workflows/backup.yml'
+  schedule:
+    - cron: '47 7 * * *'   # offsite: 02:47 EST / 03:47 EDT; ns-backup.timer runs at 02:30 local
+    - cron: '37 9 * * 0'   # restore test: Sundays 04:37 EST / 05:37 EDT
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Job to run
+        type: choice
+        options: [offsite, restore]
+        default: offsite
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-2
+  BUCKET: sre-lab-backups-${{ vars.AWS_ACCOUNT_ID }}
+  PREFIX: nightscout/live/
+  MAX_AGE_HOURS: '26'
+
+jobs:
+  scripts:
+    name: backup scripts
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck, then dump -> restore round trip (synthetic data)
+        run: CTR=docker backup/test.sh
+
+  offsite:
+    name: copy newest dump to S3
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '47 7 * * *') ||
+      (github.event_name == 'workflow_dispatch' && inputs.job == 'offsite')
+    runs-on: [self-hosted, fedora]
+    environment: backup
+    timeout-minutes: 10
+    concurrency:
+      group: backup-offsite
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: newest dump from Garage (read-only key), age and SHA-256 checked
+        env:
+          GARAGE_READER_ENV: /var/lib/gh-runner/.config/sre-lab/garage-backup-reader.env
+        run: backup/offsite.sh garage-get "$RUNNER_TEMP/backup"
+
+      - name: AWS credentials (backup writer, PutObject only)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/sre-lab/sre-lab-backup-writer
+          role-session-name: backup-offsite-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: put to S3 (S3 verifies the SHA-256; a re-run is a no-op)
+        run: backup/offsite.sh s3-put "$RUNNER_TEMP/backup"
+
+      - name: heartbeat (healthchecks.io "sre-lab backup offsite")
+        if: always()
+        env:
+          HC: ${{ secrets.HC_PING_URL }}
+          RESULT: ${{ job.status }}
+          RUN: ${{ github.run_id }}
+        run: |
+          [ -n "$HC" ] || { echo "::warning::secret HC_PING_URL is not set in environment backup"; exit 0; }
+          suffix=/fail; [ "$RESULT" = success ] && suffix=
+          curl -fsS -m 10 --retry 3 -o /dev/null --data-raw "run $RUN: $RESULT" "$HC$suffix" || true
+
+      - name: clean up
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/backup"
+
+  restore:
+    name: restore test (offsite copy)
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '37 9 * * 0') ||
+      (github.event_name == 'workflow_dispatch' && inputs.job == 'restore')
+    runs-on: ubuntu-latest
+    environment: restore
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: AWS credentials (restore reader, read-only on the prefix)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/sre-lab/sre-lab-restore-reader
+          role-session-name: backup-restore-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: newest dump from S3, age and SHA-256 checked
+        run: backup/offsite.sh s3-get "$RUNNER_TEMP/backup"
+
+      - name: restore into a throwaway Mongo 4.4 and check every count
+        run: |
+          d="$RUNNER_TEMP/backup"
+          CTR=docker backup/restore-check.sh "$d/dump" "$(cat "$d/counts-min")" "$(cat "$d/counts-max")" | tee "$d/result"
+          {
+            echo "### Restore test: $(cat "$d/key")"
+            echo
+            echo "Size $(stat -c %s "$d/dump") bytes, Mongo $(cat "$d/mongo-version"), $(grep restore_seconds "$d/result")"
+            echo
+            echo '```'
+            grep -v restore_seconds "$d/result"
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: heartbeat (healthchecks.io "sre-lab restore test")
+        if: always()
+        env:
+          HC: ${{ secrets.HC_PING_URL }}
+          RESULT: ${{ job.status }}
+          RUN: ${{ github.run_id }}
+        run: |
+          [ -n "$HC" ] || { echo "::warning::secret HC_PING_URL is not set in environment restore"; exit 0; }
+          suffix=/fail; [ "$RESULT" = success ] && suffix=
+          curl -fsS -m 10 --retry 3 -o /dev/null --data-raw "run $RUN: $RESULT" "$HC$suffix" || true

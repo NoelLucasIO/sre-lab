@@ -12,6 +12,7 @@ One runbook per alert area; every alert's `runbook_url` points here. Written for
 | `PumpDataLatencyBudgetBurn` | ticket | [pump-data-latency](pump-data-latency.md) |
 | `LabEgressDown` | ticket | [monitoring](monitoring.md#labegressdown) |
 | `NightscoutExporterDown`, `BlackboxProbesMissing`, `PrometheusRuleEvaluationFailures`, `Watchdog` | ticket / none | [monitoring](monitoring.md) |
+| healthchecks.io "sre-lab backup dump", "sre-lab backup offsite", "sre-lab restore test" | ticket | [backups](backups.md) |
 
 **Page** = act now (the 28-day error budget is burning at 13.44× or faster): PagerDuty service `sre-lab-nightscout`, high urgency. **Ticket** = act within a working day: PagerDuty service `sre-lab-tickets`, urgency fixed Low (email, no call).
 
