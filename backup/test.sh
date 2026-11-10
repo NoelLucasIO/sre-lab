@@ -5,7 +5,16 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-shellcheck -x ./*.sh ../garage/backup-keys.sh
+shellcheck -x ./*.sh ../garage/backup-keys.sh ../drill/mark
+
+# drill/mark: T0 is the zero, --report gives elapsed time per mark.
+log=$(mktemp)
+DRILL_LOG=$log ../drill/mark "prep" >/dev/null
+DRILL_LOG=$log ../drill/mark "T0 destroy complete" >/dev/null
+DRILL_LOG=$log ../drill/mark "rebuilt" | grep -q '(T0 +0:0[0-9])' || { echo "FAIL: drill/mark elapsed"; exit 1; }
+DRILL_LOG=$log ../drill/mark --report | grep -qE '^\| [0-9:]{8} \| 0:0[0-9] \| 0:0[0-9] \| rebuilt \|$' || { echo "FAIL: drill/mark --report"; exit 1; }
+rm -f "$log"
+echo "drill/mark: ok"
 
 MONGO_IMAGE=${MONGO_IMAGE:-docker.io/library/mongo:4.4@sha256:7250955b2354cc6ad3548b428628e441e34625caa39dd64906e85adf369e1942}
 CTR=${CTR:-$(command -v podman >/dev/null 2>&1 && echo podman || echo docker)}

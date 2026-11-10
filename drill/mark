@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Timestamps for the DR drill (docs/drills/): the machine's clock, not memory.
+#   drill/mark "label"    append "<UTC ISO>\t<epoch>\t<label>" to $DRILL_LOG and print it, with the
+#                         time since the mark whose label starts with T0 (if there is one yet)
+#   drill/mark --report   every mark, its time since T0 and how long its step took, as a markdown table
+# DRILL_LOG defaults to ~/drill/<UTC date>.log on the machine it runs on.
+set -euo pipefail
+
+LOG=${DRILL_LOG:-$HOME/drill/$(date -u +%F).log}
+mkdir -p "$(dirname "$LOG")"
+
+mmss() {
+  local s=$1 sign=""
+  ((s < 0)) && { sign=-; s=$((-s)); }
+  printf '%s%d:%02d' "$sign" $((s / 60)) $((s % 60))
+}
+t0() { awk -F'\t' '$3 ~ /^T0/ {print $2; exit}' "$LOG" 2>/dev/null || true; }
+
+if [[ ${1:-} == --report ]]; then
+  [[ -s $LOG ]] || { echo "no marks in $LOG" >&2; exit 1; }
+  z=$(t0)
+  prev=
+  echo "| UTC | since T0 | step took | mark |"
+  echo "|---|---|---|---|"
+  while IFS=$'\t' read -r iso ep label; do
+    since=-
+    [[ -n $z ]] && since=$(mmss $((ep - z)))
+    took=-
+    [[ -n $prev ]] && took=$(mmss $((ep - prev)))
+    printf '| %s | %s | %s | %s |\n' "${iso:11:8}" "$since" "$took" "$label"
+    prev=$ep
+  done <"$LOG"
+  exit 0
+fi
+
+label=${*:?usage: drill/mark "label" | drill/mark --report}
+ep=$(date -u +%s)
+iso=$(date -u -d "@$ep" +%FT%TZ)
+printf '%s\t%s\t%s\n' "$iso" "$ep" "$label" >>"$LOG"
+z=$(t0)
+if [[ -n $z ]]; then
+  printf '%s  %s  (T0 +%s)\n' "$iso" "$label" "$(mmss $((ep - z)))"
+else
+  printf '%s  %s\n' "$iso" "$label"
+fi
