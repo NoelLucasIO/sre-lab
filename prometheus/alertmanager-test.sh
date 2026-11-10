@@ -15,6 +15,7 @@ expect pagerduty-page   alertname=TconnectsyncPollFailureBudgetBurn severity=pag
 expect pagerduty-ticket alertname=PumpDataLatencyBudgetBurn severity=ticket sloth_slo=pump-latency instance=k3s-copy
 expect pagerduty-ticket alertname=NightscoutExporterDown severity=ticket instance=live
 expect pagerduty-ticket alertname=PrometheusRuleEvaluationFailures severity=ticket
+expect pagerduty-ticket alertname=LabEgressDown severity=ticket
 expect heartbeat        alertname=Watchdog severity=none
 expect blackhole        alertname=UpstreamCGMStale severity=info instance=k3s-copy
 expect pagerduty-ticket alertname=SomethingNew                          # unlabelled: still reaches a human

@@ -15,6 +15,9 @@ tests:
         values: '0x60'
       - series: 'nightscout_newest_entry_timestamp_seconds{job="nightscout-exporter",instance="live"}'
         values: '0x60'
+      # fedora online throughout.
+      - series: 'probe_success{job="blackbox-egress",instance="https://www.google.com/generate_204"}'
+        values: '1x60'
     promql_expr_test:
       - expr: nightscout:entry_stale:bool{instance="k3s-copy"}
         eval_time: 9m
@@ -48,6 +51,46 @@ tests:
     alert_rule_test:
       - eval_time: 25m
         alertname: UpstreamCGMStale
+        exp_alerts: []
+
+  - name: both stale while fedora is offline is ours, not upstream (2026-11-10)
+    interval: 30s
+    input_series:
+      - series: 'nightscout_newest_entry_timestamp_seconds{job="nightscout-exporter",instance="k3s-copy"}'
+        values: '0x120'
+      - series: 'nightscout_newest_entry_timestamp_seconds{job="nightscout-exporter",instance="live"}'
+        values: '0x120'
+      # Both egress probes fail for 20 min, then fedora is back online (readings stay frozen).
+      - series: 'probe_success{job="blackbox-egress",instance="https://www.cloudflare.com/cdn-cgi/trace"}'
+        values: '0x40 1x80'
+      - series: 'probe_success{job="blackbox-egress",instance="https://www.google.com/generate_204"}'
+        values: '0x40 1x80'
+    alert_rule_test:
+      - eval_time: 18m          # both stale, but offline: must not be called upstream
+        alertname: UpstreamCGMStale
+        exp_alerts: []
+      - eval_time: 27m          # online again and still stale: now it is upstream
+        alertname: UpstreamCGMStale
+        exp_alerts:
+          - exp_labels: {severity: info, category: freshness, job: nightscout-exporter, instance: k3s-copy}
+            exp_annotations:
+              summary: "Both Nightscout instances are stale: upstream (sensor warm-up, phone, Dexcom Share)."
+              runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/cgm-freshness.md"
+      - eval_time: 4m
+        alertname: LabEgressDown
+        exp_alerts: []
+      - eval_time: 30m          # recovered at 20m; still firing so the ticket can be delivered
+        alertname: LabEgressDown
+        exp_alerts: &egress
+          - exp_labels: {severity: ticket, category: monitoring}
+            exp_annotations:
+              summary: "fedora could not reach the internet; every instance and tconnectsync were cut off."
+              runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/monitoring.md#labegressdown"
+      - eval_time: 6m
+        alertname: LabEgressDown
+        exp_alerts: *egress
+      - eval_time: 37m          # keep_firing_for (15m) has run out
+        alertname: LabEgressDown
         exp_alerts: []
 
   # --- Availability: fast burn pages, healthy stays quiet ---------------------------------

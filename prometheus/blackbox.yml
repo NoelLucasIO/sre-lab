@@ -19,6 +19,15 @@ modules:
         api-secret:
           files: [/run/secrets/ns-k3s-api-hash]
       fail_if_body_not_matches_regexp: ['"status":"ok"']
+  # Can fedora reach the internet? Probed by host name, so a DNS failure counts as "offline" too
+  # (Dexcom Share and Tandem Source need DNS as much as routing). Any 2xx is enough: this
+  # measures the path, not the site. Used by UpstreamCGMStale (postmortem 2026-11-10).
+  egress:
+    prober: http
+    timeout: 5s
+    http:
+      preferred_ip_protocol: ip4
+      follow_redirects: false
   ns_live:
     prober: http
     timeout: 5s

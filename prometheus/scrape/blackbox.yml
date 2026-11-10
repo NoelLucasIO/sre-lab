@@ -36,3 +36,21 @@ scrape_configs:
         replacement: 127.0.0.1:9115
       - target_label: instance
         replacement: live
+  # Egress from fedora: two sites on different providers. The k3s nodes are VMs on fedora's
+  # bridge, so this is the internet path of both Nightscout instances. instance = probed URL.
+  - job_name: blackbox-egress
+    metrics_path: /probe
+    params:
+      module: [egress]
+    scrape_interval: 30s
+    static_configs:
+      - targets:
+          - https://www.cloudflare.com/cdn-cgi/trace
+          - https://www.google.com/generate_204
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115

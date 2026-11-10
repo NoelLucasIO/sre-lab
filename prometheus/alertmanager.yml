@@ -38,8 +38,9 @@ route:
       receiver: blackhole
 
 inhibit_rules:
-  # Sensor warm-up, phone or Dexcom Share: both instances stale, so not ours. The budget is still
-  # spent (the SLO stays user-facing), but nobody gets paged for a sensor change.
+  # Sensor warm-up, phone or Dexcom Share: both instances stale while fedora is online, so not
+  # ours (UpstreamCGMStale checks egress: postmortem 2026-11-10). The budget is still spent (the
+  # SLO stays user-facing), but nobody gets paged for a sensor change.
   - source_matchers: ['alertname="UpstreamCGMStale"']
     target_matchers: ['alertname="NightscoutCGMFreshnessBudgetBurn"', 'severity="page"']
     equal: [instance]
