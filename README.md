@@ -20,6 +20,7 @@ backup/               Nightscout backups: mongodump timer (fedora), offsite copy
 ansible/              k3s via the pinned k3s.orchestration collection; namespace-scoped deployer for the app pipeline
 ci/                   change-risk gate, self-hosted runner install, Nightscout deploy/health/rollback scripts + tests
 docs/decisions/       Architecture decision records
+drill/                DR drill tooling: `mark` (step timestamps and elapsed-time report)
 docs/postmortems/     Blameless postmortems · docs/alert-log.md: every alert and whether it needed action
 docs/slos.md          SLO definitions and the measurements behind them
 docs/runbooks/        One runbook per alert, every command executed before merge

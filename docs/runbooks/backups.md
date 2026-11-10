@@ -68,4 +68,13 @@ podman exec -i nightscout-mongo mongorestore --archive --gzip --drop --nsInclude
 systemctl --user start nightscout nightscout-tconnectsync
 ```
 
-`--drop` replaces each collection with the dump's contents: anything written after the dump is lost unless upstream sends it again. If Garage on fedora survived, its copy is newer than or equal to S3's: `GARAGE_READER_ENV=… backup/offsite.sh garage-get "$d"` (reader key file needs `sudo`). The timed DR drill (Phase 4 step 3) runs this procedure against a fresh Mongo and records the RTO.
+`--drop` replaces each collection with the dump's contents: anything written after the dump is lost unless upstream sends it again.
+
+**The k3s copy** (after a rebuild, or in the DR drill), from the repo on fedora:
+
+```bash
+aws sso login --profile sre-lab-admin --use-device-code
+AWS_PROFILE=sre-lab-admin backup/restore-k3s.sh
+```
+
+It proves the dump in a throwaway Mongo first, stops `nightscout` and `tconnectsync`, restores into `mongo-0` with `--drop` over the admin SSH route to k3s-server-1, checks every count on k3s, and starts both again (also when a step fails). A Mongo 4.4 dump restores into the copy's Mongo 7.0 with identical counts (tested 2026-11-10). If Garage on fedora survived, its copy is newer than or equal to S3's: `GARAGE_READER_ENV=… backup/offsite.sh garage-get "$d"` (reader key file needs `sudo`). The timed DR drill (Phase 4 step 3) runs the k3s path against a rebuilt cluster and records the RTO, with `drill/mark` timestamps.
