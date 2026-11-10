@@ -13,11 +13,11 @@ pq '(time() - nightscout_newest_entry_timestamp_seconds) / 60'   # minutes since
 
 | copy | live | Meaning | Go to |
 |---|---|---|---|
-| 1 | 1 | Upstream: sensor, phone/receiver, or Dexcom Share | 2 |
+| 1 | 1 | Upstream: sensor, phone/receiver, or Dexcom Share (if fedora is online) | 2 |
 | 1 | 0 | Ours: the k3s copy | 3 |
 | 0 | 1 | The live pod only (not this SLO, but fix it) | 4 |
 
-`UpstreamCGMStale` firing is the same as row 1.
+`UpstreamCGMStale` firing is the same as row 1. Both stale while `pq 'lab:egress_up:bool'` is 0 is not upstream: fedora is offline (both instances use its uplink). Go to [monitoring: LabEgressDown](monitoring.md#labegressdown).
 
 ## 2. Upstream (both stale)
 

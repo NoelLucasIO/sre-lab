@@ -10,14 +10,23 @@ groups:
       - record: nightscout:entry_stale:bool
         expr: (time() - nightscout_newest_entry_timestamp_seconds) >= bool 600
 
+      # 1 while fedora can reach the internet (either egress probe succeeds), 0 while neither
+      # can. No egress probes at all leaves it absent: BlackboxProbesMissing covers that, and
+      # UpstreamCGMStale then cannot fire, so the freshness page is not inhibited (fails loud).
+      - record: lab:egress_up:bool
+        expr: max(probe_success{job="blackbox-egress"})
+
   - name: sre-lab-guards
     rules:
-      # Both instances stale at once = sensor, phone or Dexcom Share, not anything we run.
-      # Informational: Alertmanager inhibits the freshness page while this fires.
+      # Both instances stale at once while fedora is online = sensor, phone or Dexcom Share, not
+      # anything we run. Informational: Alertmanager inhibits the freshness page while this fires.
+      # Both stale while fedora is offline is ours (postmortem 2026-11-10: NIC hang, both
+      # instances share fedora's uplink), so it must not count as upstream.
       - alert: UpstreamCGMStale
         expr: |
           nightscout:entry_stale:bool{instance="k3s-copy"} == 1
           and on () nightscout:entry_stale:bool{instance="live"} == 1
+          and on () lab:egress_up:bool == 1
         for: 5m
         labels:
           severity: info
@@ -38,7 +47,10 @@ groups:
           runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/monitoring.md"
 
       - alert: BlackboxProbesMissing
-        expr: absent(probe_success{job="blackbox-ns-copy"}) or up{job=~"blackbox-ns-.*"} == 0
+        expr: |
+          absent(probe_success{job="blackbox-ns-copy"})
+          or absent(probe_success{job="blackbox-egress"})
+          or up{job=~"blackbox-.*"} == 0
         for: 10m
         labels:
           severity: ticket
@@ -46,6 +58,20 @@ groups:
         annotations:
           summary: "Availability probes are not running; the availability SLO is blind."
           runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/monitoring.md"
+
+      # fedora is offline. Nothing can be delivered while this is true: healthchecks.io pages,
+      # because the heartbeat stops. keep_firing_for holds it past recovery so the ticket reaches
+      # PagerDuty once egress is back, putting the outage on record.
+      - alert: LabEgressDown
+        expr: lab:egress_up:bool == 0
+        for: 5m
+        keep_firing_for: 15m
+        labels:
+          severity: ticket
+          category: monitoring
+        annotations:
+          summary: "fedora could not reach the internet; every instance and tconnectsync were cut off."
+          runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/monitoring.md#labegressdown"
 
       # Staleness guard for pump data: no tconnectsync event at all looks like zero latency.
       # tconnectsync itself gives up after 180 min without new data (AUTOUPDATE_NO_DATA_FAILURE_MINUTES).
