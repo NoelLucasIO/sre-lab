@@ -1,6 +1,6 @@
 # envs/aws-bootstrap
 
-The GitHub OIDC provider and the two CI roles (`sre-lab-plan`, `sre-lab-apply`). Applied by a
+The GitHub OIDC provider and the CI roles: `sre-lab-plan`, `sre-lab-apply` (ADR 0009), `sre-lab-backup-writer` and `sre-lab-restore-reader` (ADR 0010). Applied by a
 human, never by CI, so the pipeline cannot widen its own permissions (ADR 0009). CI validates,
 lints and Checkov-scans it on every PR; the nightly drift check plans it.
 
@@ -35,3 +35,12 @@ rm terraform/envs/aws-bootstrap/bootstrap.tfplan
   ```bash
   TF_VAR_budget_email=you@example.com
   ```
+
+## Backup environments (once, ADR 0010)
+
+The backup roles trust GitHub environments rather than a reviewer, because their jobs run on a
+schedule. Create both under Settings > Environments, each with **Deployment branches: `main` only**
+and no required reviewer:
+
+- `backup`: secret `HC_PING_URL` (healthchecks.io check "sre-lab backup offsite").
+- `restore`: secret `HC_PING_URL` (healthchecks.io check "sre-lab restore test").

@@ -15,13 +15,16 @@ is a Nightscout + tconnectsync stack, so every SLO, alert and drill measures rea
 ```
 .github/workflows/    terraform (plan/gate/apply) · drift (nightly) · k3s (Ansible) · nightscout (deploy + rollback)
                       exporter (test, build, GHCR) · rules (Sloth drift, promtool tests, Alertmanager routing)
+                      backup (script tests on PRs, nightly offsite copy to S3, weekly restore test)
+backup/               Nightscout backups: mongodump timer (fedora), offsite copy, restore check + self-test
 ansible/              k3s via the pinned k3s.orchestration collection; namespace-scoped deployer for the app pipeline
 ci/                   change-risk gate, self-hosted runner install, Nightscout deploy/health/rollback scripts + tests
 docs/decisions/       Architecture decision records
+docs/postmortems/     Blameless postmortems · docs/alert-log.md: every alert and whether it needed action
 docs/slos.md          SLO definitions and the measurements behind them
 docs/runbooks/        One runbook per alert, every command executed before merge
 exporter/             Nightscout SLI exporter (stdlib Python, tests, Dockerfile)
-garage/               Garage S3 (rootless Podman quadlet), backup target
+garage/               Garage S3 (rootless Podman quadlet), local backup tier and its scoped keys
 k8s/nightscout/       Nightscout, MongoDB and tconnectsync on k3s (kustomize, digest-pinned images)
 keys/                 Public SSH keys baked into VMs by cloud-init
 policy/               Custom Checkov policies + their self-test
@@ -145,6 +148,9 @@ terraform/lock-test/  Proof that state locking excludes a second writer
   evaluated outside the cluster on fedora's Prometheus; the repo owns only its rule and scrape fragments.
 - [ADR 0009: AWS account and CI trust](docs/decisions/0009-aws-account-and-ci-trust.md): Paid plan
   so backups survive, OIDC roles split by what a job can do, and a trust anchor CI cannot apply.
+- [ADR 0010: Backups](docs/decisions/0010-backups.md): two stages because the database is reachable
+  only by its owner; write-only and read-only keys and roles; a weekly restore test that needs
+  nothing from the lab.
 
 ## Host
 

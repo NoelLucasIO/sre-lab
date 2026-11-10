@@ -30,3 +30,21 @@ variable "apply_environment" {
   type        = string
   default     = "lab"
 }
+
+variable "backup_environment" {
+  description = "GitHub environment (main only, no reviewer: scheduled) whose jobs may assume the backup writer role."
+  type        = string
+  default     = "backup"
+}
+
+variable "restore_environment" {
+  description = "GitHub environment (main only, no reviewer: scheduled) whose jobs may assume the restore reader role."
+  type        = string
+  default     = "restore"
+}
+
+variable "backup_prefix" {
+  description = "Key prefix in the backup bucket that the backup roles may reach."
+  type        = string
+  default     = "nightscout/live/"
+}
