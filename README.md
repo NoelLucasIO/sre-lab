@@ -8,7 +8,7 @@ is a Nightscout + tconnectsync stack, so every SLO, alert and drill measures rea
 | 1 | Terraform modules, remote state with enforced locking, policy-as-code | **Done** (2026-11-05) |
 | 2 | CI/CD: plan on PR, approval gate, change-risk checks, automatic rollback | **Done** (2026-11-06) |
 | 3 | SLIs/SLOs, multi-window burn-rate alerts, on-call routing, runbooks | **Live** (2026-11-09); alert-tuning week in progress |
-| 4 | AWS via Terraform, offsite backups, timed DR drill, game day, postmortem | **In progress**: AWS foundation done (2026-11-09); backups next |
+| 4 | AWS via Terraform, offsite backups, timed DR drill, game day, postmortem | **In progress**: AWS foundation (2026-11-09) and offsite backups (2026-11-10) done; first postmortem published; timed DR drill next |
 
 ## Layout
 
@@ -126,8 +126,24 @@ terraform/lock-test/  Proof that state locking excludes a second writer
   and repository IDs, so a recreated repository with the same name cannot assume the roles.
 - **Offsite target and cost guardrail, Terraform only:** an encrypted, versioned backup bucket
   (public access blocked, TLS required, `prevent_destroy`; Glacier after 30 days, expiry after 365)
-  and a $5 monthly budget that excludes credits, so it alerts on real spend. Checkov now runs all
-  built-in policies: 95 pass, 4 skips each justified inline.
+  and a $5 monthly budget that excludes credits, so it alerts on real spend. Checkov runs all
+  built-in policies: 153 pass, 4 skips each justified inline.
+- **Backups with separation of duties (ADR 0010):** a nightly `mongodump` of the live database goes
+  to Garage with a write-only key, then CI copies it to S3 through an OIDC role that can only add
+  objects under one prefix. The job that writes backups cannot read them back; S3 verifies every
+  upload's SHA-256, a re-run cannot overwrite, and a dump older than 26 hours is refused (the RPO
+  guard). Each stage has its own external heartbeat.
+- **Restores proven, not assumed:** every week a GitHub-hosted runner, using a read-only role,
+  restores the newest offsite dump into a throwaway Mongo and checks every collection's document
+  count against counts recorded at dump time. It needs nothing from the lab, so it proves recovery
+  if the whole host is gone. The k3s restore path was rehearsed before the timed drill: 52 seconds
+  end to end, every count exact, including a Mongo 4.4 dump into the copy's Mongo 7.0.
+- **A real outage, handled blamelessly:** on 2026-11-10 the host's network card hung for 8 h 41 min.
+  The external dead man's switch paged within 10 minutes, the only alert that could leave the host.
+  The [postmortem](docs/postmortems/2026-11-10-fedora-nic-hang.md) measures the impact from
+  Prometheus (129% of the month's freshness budget) and found that the "upstream or us" rule had
+  blamed Dexcom for our own outage. Fixed with egress probes, a regression test and a mutation
+  check; every alert since is logged in [`docs/alert-log.md`](docs/alert-log.md).
 
 ## Decisions
 
