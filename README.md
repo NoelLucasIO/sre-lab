@@ -3,6 +3,10 @@
 A home-lab reliability platform, built the way production should be. The service under management
 is a Nightscout + tconnectsync stack, so every SLO, alert and drill measures real data.
 
+![sre-lab architecture](docs/architecture/sre-lab-architecture.png)
+
+Diagram source: [`docs/architecture/sre-lab-architecture.drawio`](docs/architecture/sre-lab-architecture.drawio) (open in draw.io).
+
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | Terraform modules, remote state with enforced locking, policy-as-code | **Done** (2026-11-05) |
@@ -20,6 +24,7 @@ backup/               Nightscout backups: mongodump timer (fedora), offsite copy
 ansible/              k3s via the pinned k3s.orchestration collection; namespace-scoped deployer for the app pipeline
 ci/                   change-risk gate, self-hosted runner install, Nightscout deploy/health/rollback scripts + tests
 docs/decisions/       Architecture decision records
+docs/architecture/    Architecture diagram (draw.io source + PNG export)
 drill/                DR drill tooling: `mark` (step timestamps and elapsed-time report)
 docs/postmortems/     Blameless postmortems · docs/alert-log.md: every alert and whether it needed action
 docs/slos.md          SLO definitions and the measurements behind them

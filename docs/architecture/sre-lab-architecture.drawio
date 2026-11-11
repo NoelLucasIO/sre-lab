@@ -1,0 +1,270 @@
+<?xml version="1.0" ?>
+<mxfile host="app.diagrams.net">
+  <diagram id="sre-lab" name="sre-lab architecture">
+    <mxGraphModel dx="1920" dy="1080" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1080" background="#0B1220" math="0" shadow="0" adaptiveColors="none">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="&lt;b&gt;sre-lab&lt;/b&gt; — a home-lab reliability platform, built the way production should be" style="text;html=1;whiteSpace=wrap;fontSize=26;fontColor=#F8FAFC;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="30" y="14" width="1860" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="sub" value="Terraform · CI/CD with approval gates &amp;amp; auto-rollback · SLOs, burn-rate alerting &amp;amp; on-call · AWS offsite backups &amp;amp; timed DR &amp;nbsp;—&amp;nbsp; &lt;font color=&quot;#60A5FA&quot;&gt;github.com/NoelLucasIO/sre-lab&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;fontSize=15;fontColor=#94A3B8;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="30" y="54" width="1860" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="g_dev" value="Workstation" style="rounded=1;arcSize=3;container=1;collapsible=0;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#334155;strokeWidth=1.5;fontColor=#E2E8F0;fontSize=15;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=2;" vertex="1" parent="1">
+          <mxGeometry x="30" y="100" width="340" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="p620" value="&lt;b&gt;P620&lt;/b&gt; · CachyOS&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;git + gh CLI · commits signed with&lt;br&gt;YubiKey FIPS hardware keys&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#60A5FA;strokeWidth=2;fontColor=#F1F5F9;fontSize=12;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_dev">
+          <mxGeometry x="15" y="35" width="310" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="g_gh" value="GitHub · NoelLucasIO/sre-lab (public)" style="rounded=1;arcSize=3;container=1;collapsible=0;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#334155;strokeWidth=1.5;fontColor=#E2E8F0;fontSize=15;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=2;" vertex="1" parent="1">
+          <mxGeometry x="30" y="250" width="340" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="repo" value="&lt;b&gt;main&lt;/b&gt; ruleset&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;PR required · signed commits · no force push&lt;br&gt;6 required checks · ADRs 0001–0010&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#60A5FA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_gh">
+          <mxGeometry x="15" y="35" width="310" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="actions" value="&lt;b&gt;Actions workflows&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;terraform: plan on PR → change-risk gate →&lt;br&gt;human approval → apply the saved plan&lt;br&gt;drift: nightly plan → opens/closes an issue&lt;br&gt;k3s converge · nightscout deploy + rollback&lt;br&gt;rules · backup (offsite + restore test)&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#60A5FA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_gh">
+          <mxGeometry x="15" y="140" width="310" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="envs" value="&lt;b&gt;Environments&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;lab (required reviewer) · backup · restore&lt;br&gt;main-only, each bound to one OIDC role&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#60A5FA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_gh">
+          <mxGeometry x="15" y="305" width="310" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ghh" value="&lt;b&gt;GitHub-hosted runners&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;PR checks: tflint · custom Checkov policies ·&lt;br&gt;promtool test rules · amtool · shellcheck ·&lt;br&gt;exporter tests (untrusted code never&lt;br&gt;touches the lab)&lt;br&gt;weekly restore test of the offsite copy&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#60A5FA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_gh">
+          <mxGeometry x="15" y="400" width="310" height="145" as="geometry"/>
+        </mxCell>
+        <mxCell id="g_fed" value="fedora · Fedora Server 44 · rootless Podman quadlets + libvirt/KVM" style="rounded=1;arcSize=3;container=1;collapsible=0;html=1;whiteSpace=wrap;fillColor=#0F172A;strokeColor=#475569;strokeWidth=1.5;fontColor=#E2E8F0;fontSize=16;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=2;" vertex="1" parent="1">
+          <mxGeometry x="400" y="100" width="1060" height="830" as="geometry"/>
+        </mxCell>
+        <mxCell id="g_k3s" value="k3s v1.37 on libvirt/KVM — production-style copy, safe to break" style="rounded=1;arcSize=3;container=1;collapsible=0;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#A78BFA;strokeWidth=1.5;fontColor=#E2E8F0;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=2;" vertex="1" parent="g_fed">
+          <mxGeometry x="20" y="40" width="500" height="405" as="geometry"/>
+        </mxCell>
+        <mxCell id="k0" value="&lt;b&gt;k3s-server-1&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;192.168.2.40&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#A78BFA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_k3s">
+          <mxGeometry x="15" y="32" width="150" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="k1" value="&lt;b&gt;k3s-server-2&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;192.168.2.41&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#A78BFA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_k3s">
+          <mxGeometry x="175" y="32" width="150" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="k2" value="&lt;b&gt;k3s-server-3&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;192.168.2.42&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#A78BFA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_k3s">
+          <mxGeometry x="335" y="32" width="150" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="k3scap" value="Terraform &lt;i&gt;vm&lt;/i&gt; module + cloud-init · Ansible (pinned collection) · full rebuild in 70 s" style="text;html=1;whiteSpace=wrap;fontSize=11;fontColor=#A5B4FC;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="g_k3s">
+          <mxGeometry x="15" y="88" width="470" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="g_ns" value="namespace nightscout · Traefik ingress · images pinned by digest" style="rounded=1;arcSize=3;container=1;collapsible=0;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#475569;strokeWidth=1.5;fontColor=#E2E8F0;fontSize=11;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=2;" vertex="1" parent="g_k3s">
+          <mxGeometry x="15" y="118" width="470" height="275" as="geometry"/>
+        </mxCell>
+        <mxCell id="ns_c" value="&lt;b&gt;Nightscout&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;copy&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#94A3B8;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_ns">
+          <mxGeometry x="15" y="32" width="140" height="62" as="geometry"/>
+        </mxCell>
+        <mxCell id="mg_c" value="&lt;b&gt;MongoDB 7.0&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;restored from live dumps&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#94A3B8;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_ns">
+          <mxGeometry x="170" y="32" width="140" height="62" as="geometry"/>
+        </mxCell>
+        <mxCell id="tc_c" value="&lt;b&gt;tconnectsync&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;fixed 5-min poll (A/B)&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#94A3B8;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_ns">
+          <mxGeometry x="325" y="32" width="135" height="62" as="geometry"/>
+        </mxCell>
+        <mxCell id="dep" value="&lt;b&gt;namespace-scoped deployer&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;RBAC limits proven both ways&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#60A5FA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_ns">
+          <mxGeometry x="15" y="109" width="220" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="exp_c" value="&lt;b&gt;ns-exporter&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;SLI metrics: freshness,&lt;br&gt;pump-data latency&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#FBBF24;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_ns">
+          <mxGeometry x="250" y="109" width="210" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="drt" value="&lt;b&gt;DR target&lt;/b&gt; · restore-k3s.sh&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;S3 → SHA-256 check → throwaway restore proof → mongorestore → verify counts&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#34D399;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;dashed=1;" vertex="1" parent="g_ns">
+          <mxGeometry x="15" y="194" width="445" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="g_live" value="Live service · ns.noellucas.io (Podman pod)" style="rounded=1;arcSize=3;container=1;collapsible=0;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#94A3B8;strokeWidth=1.5;fontColor=#E2E8F0;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=2;" vertex="1" parent="g_fed">
+          <mxGeometry x="540" y="40" width="500" height="190" as="geometry"/>
+        </mxCell>
+        <mxCell id="ns_l" value="&lt;b&gt;Nightscout&lt;/b&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#94A3B8;strokeWidth=2;fontColor=#F1F5F9;fontSize=12;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_live">
+          <mxGeometry x="15" y="32" width="150" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="mg_l" value="&lt;b&gt;MongoDB 4.4&lt;/b&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#94A3B8;strokeWidth=2;fontColor=#F1F5F9;fontSize=12;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_live">
+          <mxGeometry x="175" y="32" width="150" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="tc_l" value="&lt;b&gt;tconnectsync&lt;/b&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#94A3B8;strokeWidth=2;fontColor=#F1F5F9;fontSize=12;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_live">
+          <mxGeometry x="335" y="32" width="150" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="exp_l" value="&lt;b&gt;ns-exporter-live&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;same SLIs, measured from outside the cluster&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#FBBF24;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_live">
+          <mxGeometry x="15" y="105" width="470" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="g_obs" value="Observability &amp; on-call" style="rounded=1;arcSize=3;container=1;collapsible=0;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#FBBF24;strokeWidth=1.5;fontColor=#E2E8F0;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=2;" vertex="1" parent="g_fed">
+          <mxGeometry x="540" y="250" width="500" height="300" as="geometry"/>
+        </mxCell>
+        <mxCell id="prom" value="&lt;b&gt;Prometheus&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;4 SLOs · 28-day windows&lt;br&gt;Sloth multi-window burn-rate&lt;br&gt;rules, unit-tested in CI&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#FBBF24;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_obs">
+          <mxGeometry x="15" y="33" width="230" height="107" as="geometry"/>
+        </mxCell>
+        <mxCell id="bbox" value="&lt;b&gt;Blackbox exporter&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;authenticated API probes&lt;br&gt;(3 nodes + live) · egress probes&lt;br&gt;tell &quot;upstream&quot; from &quot;us&quot;&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#FBBF24;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_obs">
+          <mxGeometry x="260" y="33" width="225" height="107" as="geometry"/>
+        </mxCell>
+        <mxCell id="graf" value="&lt;b&gt;Grafana&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;SLO dashboard (17 panels)&lt;br&gt;data sources + dashboards&lt;br&gt;in their own Terraform root&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#FBBF24;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_obs">
+          <mxGeometry x="15" y="175" width="230" height="113" as="geometry"/>
+        </mxCell>
+        <mxCell id="am" value="&lt;b&gt;Alertmanager&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;page vs ticket routing&lt;br&gt;upstream-vs-us inhibit&lt;br&gt;routing tests in CI&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#FBBF24;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_obs">
+          <mxGeometry x="260" y="175" width="225" height="113" as="geometry"/>
+        </mxCell>
+        <mxCell id="g_plat" value="Platform services &amp; IaC" style="rounded=1;arcSize=3;container=1;collapsible=0;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#A78BFA;strokeWidth=1.5;fontColor=#E2E8F0;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=2;" vertex="1" parent="g_fed">
+          <mxGeometry x="20" y="465" width="500" height="350" as="geometry"/>
+        </mxCell>
+        <mxCell id="runner" value="&lt;b&gt;Self-hosted Actions runner&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;locked-down system user · no shell, no sudo · own least-privilege creds&lt;br&gt;polls GitHub for jobs (outbound only) · drives terraform apply · ansible ·&lt;br&gt;deploy → health check → auto-rollback&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#60A5FA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_plat">
+          <mxGeometry x="15" y="27" width="470" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="pg" value="&lt;b&gt;PostgreSQL 18&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;Terraform state +&lt;br&gt;advisory locks (proven)&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#A78BFA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_plat">
+          <mxGeometry x="15" y="141" width="230" height="74" as="geometry"/>
+        </mxCell>
+        <mxCell id="dns" value="&lt;b&gt;Technitium DNS&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;A + PTR records via&lt;br&gt;zones-only API token&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#A78BFA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_plat">
+          <mxGeometry x="255" y="141" width="230" height="74" as="geometry"/>
+        </mxCell>
+        <mxCell id="iac" value="&lt;b&gt;Terraform roots&lt;/b&gt;&lt;font color=&quot;#94A3B8&quot;&gt;: lab-base · lab · observability · aws-bootstrap (human-applied) · aws (CI)&lt;/font&gt;&lt;br&gt;&lt;b&gt;Policy-as-code&lt;/b&gt;&lt;font color=&quot;#94A3B8&quot;&gt;: tflint · custom Checkov policies tested against violating fixtures · change-risk gate blocks &amp;gt;2 destroys or anything tagged critical&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#A78BFA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_plat">
+          <mxGeometry x="15" y="227" width="470" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="g_bk" value="Backups &amp; DR" style="rounded=1;arcSize=3;container=1;collapsible=0;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#34D399;strokeWidth=1.5;fontColor=#E2E8F0;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=2;" vertex="1" parent="g_fed">
+          <mxGeometry x="540" y="565" width="500" height="250" as="geometry"/>
+        </mxCell>
+        <mxCell id="garage" value="&lt;b&gt;Garage S3&lt;/b&gt; (local)&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;nightly dumps · 14-day&lt;br&gt;lifecycle · write-only and&lt;br&gt;read-only keys&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#34D399;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_bk">
+          <mxGeometry x="15" y="33" width="215" height="102" as="geometry"/>
+        </mxCell>
+        <mxCell id="nsb" value="&lt;b&gt;ns-backup.timer&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;nightly mongodump of&lt;br&gt;the live DB · SHA-256 +&lt;br&gt;per-collection counts&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#34D399;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_bk">
+          <mxGeometry x="270" y="33" width="215" height="102" as="geometry"/>
+        </mxCell>
+        <mxCell id="drill" value="&lt;b&gt;Timed DR drill&lt;/b&gt;&lt;font color=&quot;#94A3B8&quot;&gt;: destroy envs/lab → rebuild via pipelines → restore from S3 → RTO/RPO&lt;/font&gt;&lt;br&gt;&lt;b&gt;Real incident&lt;/b&gt;&lt;font color=&quot;#94A3B8&quot;&gt;: 8 h 41 m host NIC hang → blameless postmortem → fixes merged&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#34D399;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_bk">
+          <mxGeometry x="15" y="157" width="470" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="g_up" value="Upstream data (SaaS)" style="rounded=1;arcSize=3;container=1;collapsible=0;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#334155;strokeWidth=1.5;fontColor=#E2E8F0;fontSize=15;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=2;" vertex="1" parent="1">
+          <mxGeometry x="1490" y="100" width="400" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="tandem" value="&lt;b&gt;Tandem Source&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;insulin pump data&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#94A3B8;strokeWidth=2;fontColor=#F1F5F9;fontSize=12;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_up">
+          <mxGeometry x="15" y="35" width="180" height="98" as="geometry"/>
+        </mxCell>
+        <mxCell id="dexcom" value="&lt;b&gt;Dexcom Share&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;CGM readings&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#94A3B8;strokeWidth=2;fontColor=#F1F5F9;fontSize=12;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_up">
+          <mxGeometry x="205" y="35" width="180" height="98" as="geometry"/>
+        </mxCell>
+        <mxCell id="g_aws" value="AWS · us-east-2 · dedicated account" style="rounded=1;arcSize=3;container=1;collapsible=0;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#34D399;strokeWidth=1.5;fontColor=#E2E8F0;fontSize=15;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=2;" vertex="1" parent="1">
+          <mxGeometry x="1490" y="270" width="400" height="330" as="geometry"/>
+        </mxCell>
+        <mxCell id="oidc" value="&lt;b&gt;IAM OIDC provider&lt;/b&gt; → one role per environment&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;plan · apply · backup-writer (put-only) · restore-reader&lt;br&gt;(read-only) · zero long-lived credentials&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#34D399;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_aws">
+          <mxGeometry x="15" y="35" width="370" height="88" as="geometry"/>
+        </mxCell>
+        <mxCell id="s3" value="&lt;b&gt;S3 · sre-lab-backups&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;versioned · SSE · TLS-only · public access blocked&lt;br&gt;prevent_destroy · Glacier 30 d · expire 365 d&lt;br&gt;SHA-256 checksum + If-None-Match on upload&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#34D399;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_aws">
+          <mxGeometry x="15" y="135" width="370" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="budget" value="&lt;b&gt;Guardrails&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;$5/month budget alarm · SSO with YubiKey, 1 h sessions&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#34D399;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_aws">
+          <mxGeometry x="15" y="252" width="370" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="g_oc" value="On-call" style="rounded=1;arcSize=3;container=1;collapsible=0;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#FBBF24;strokeWidth=1.5;fontColor=#E2E8F0;fontSize=15;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=2;" vertex="1" parent="1">
+          <mxGeometry x="1490" y="620" width="400" height="290" as="geometry"/>
+        </mxCell>
+        <mxCell id="pd" value="&lt;b&gt;PagerDuty&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;sre-lab-nightscout: pages, high urgency&lt;br&gt;(push → SMS → call)&lt;br&gt;sre-lab-tickets: low urgency, email only&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#FBBF24;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_oc">
+          <mxGeometry x="15" y="35" width="370" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="hc" value="&lt;b&gt;healthchecks.io&lt;/b&gt; · dead man's switch&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;Watchdog heartbeat every minute&lt;br&gt;backup dump / offsite / restore-test checks&lt;br&gt;paged within 10 min of a real outage&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#FBBF24;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_oc">
+          <mxGeometry x="15" y="170" width="370" height="108" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg0" value="Phase 1 · Terraform modules, locked remote state, policy-as-code" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#A78BFA;strokeWidth=2;fontColor=#F1F5F9;fontSize=12;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="1">
+          <mxGeometry x="30" y="952" width="452" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg1" value="Phase 2 · CI/CD: plan on PR, approval gate, drift, auto-rollback" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#60A5FA;strokeWidth=2;fontColor=#F1F5F9;fontSize=12;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="1">
+          <mxGeometry x="498" y="952" width="452" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg2" value="Phase 3 · SLIs/SLOs, burn-rate alerts, PagerDuty on-call, runbooks" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#FBBF24;strokeWidth=2;fontColor=#F1F5F9;fontSize=12;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="1">
+          <mxGeometry x="966" y="952" width="452" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg3" value="Phase 4 · AWS via OIDC, offsite backups, restore tests, DR drill" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#111827;strokeColor=#34D399;strokeWidth=2;fontColor=#F1F5F9;fontSize=12;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="1">
+          <mxGeometry x="1434" y="952" width="452" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="foot" value="&lt;font color=&quot;#94A3B8&quot;&gt;Grey = application data flow · Every claim is backed by a PR, ADR, test or drill record in the repo · Fedora 44 · Podman · libvirt/KVM · k3s · Terraform · Ansible · GitHub Actions · Prometheus · Grafana · PagerDuty · AWS&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#CBD5E1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="30" y="1000" width="1860" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#60A5FA;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0.92;exitY=1;exitDx=0;exitDy=0;entryX=0.92;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="p620" target="repo">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#60A5FA;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="runner" target="actions">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="385" y="637"/>
+              <mxPoint x="385" y="465"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#60A5FA;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="runner" target="g_k3s">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#A78BFA;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="runner" target="pg">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#A78BFA;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="runner" target="dns">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" value="pump +&lt;br&gt;CGM" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#94A3B8;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="g_up" target="g_live">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7" value="scrape" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#FBBF24;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="exp_c" target="prom">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#FBBF24;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0.415;exitY=1;exitDx=0;exitDy=0;entryX=0.848;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="exp_l" target="prom">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e9" value="probe" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#FBBF24;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.745;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="bbox" target="g_live">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10" value="alerts" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#FBBF24;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="prom" target="am">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1070" y="507"/>
+              <mxPoint x="1312" y="507"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#FBBF24;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="prom" target="graf">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#FBBF24;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="am" target="pd">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1484" y="560"/>
+              <mxPoint x="1484" y="705"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#FBBF24;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;dashed=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="am" target="hc">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1476" y="610"/>
+              <mxPoint x="1476" y="844"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e14" value="pages if silent" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#FBBF24;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="hc" target="pd">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#34D399;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=1;exitY=0.84;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="g_live" target="nsb">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1449" y="300"/>
+              <mxPoint x="1449" y="749"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#34D399;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="nsb" target="garage">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e17" value="nightly offsite copy (OIDC)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#34D399;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="garage" target="s3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1062" y="811"/>
+              <mxPoint x="1468" y="811"/>
+              <mxPoint x="1468" y="457"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e18" value="weekly restore test · GitHub-hosted runner, read-only role" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#34D399;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="ghh" target="s3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="200" y="940"/>
+              <mxPoint x="1905" y="940"/>
+              <mxPoint x="1905" y="457"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
