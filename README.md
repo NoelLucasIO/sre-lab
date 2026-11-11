@@ -12,7 +12,7 @@ Diagram source: [`docs/architecture/sre-lab-architecture.drawio`](docs/architect
 | 1 | Terraform modules, remote state with enforced locking, policy-as-code | **Done** (2026-11-05) |
 | 2 | CI/CD: plan on PR, approval gate, change-risk checks, automatic rollback | **Done** (2026-11-06) |
 | 3 | SLIs/SLOs, multi-window burn-rate alerts, on-call routing, runbooks | **Live** (2026-11-09); alert-tuning week in progress |
-| 4 | AWS via Terraform, offsite backups, timed DR drill, game day, postmortem | **In progress**: AWS foundation (2026-11-09), offsite backups (2026-11-10) and the timed DR drill (2026-11-11, RTO 23 min against 60) done; first postmortem published; game day next |
+| 4 | AWS via Terraform, offsite backups, timed DR drill, game day, postmortem | **In progress**: AWS foundation (2026-11-09), offsite backups (2026-11-10), timed DR drill (2026-11-11, RTO 23 min against 60) and its fixes (same day) done; first postmortem published; game day next |
 
 ## Layout
 
@@ -22,10 +22,12 @@ Diagram source: [`docs/architecture/sre-lab-architecture.drawio`](docs/architect
                       backup (script tests on PRs, nightly offsite copy to S3, weekly restore test)
 backup/               Nightscout backups: mongodump timer (fedora), offsite copy, restore check + self-test
 ansible/              k3s via the pinned k3s.orchestration collection; namespace-scoped deployer for the app pipeline
-ci/                   change-risk gate, self-hosted runner install, Nightscout deploy/health/rollback scripts + tests
+ci/                   change-risk gate, self-hosted runner install and pinned VM host keys (rendered from Terraform),
+                      Nightscout deploy/health/rollback scripts + tests, copy secret seeding
 docs/decisions/       Architecture decision records
 docs/architecture/    Architecture diagram (draw.io source + PNG export)
 drill/                DR drill tooling: `mark` (step timestamps and elapsed-time report)
+docs/drills/          DR drill records: timeline, RTO/RPO against target, alerts, findings with actions
 docs/postmortems/     Blameless postmortems · docs/alert-log.md: every alert and whether it needed action
 docs/slos.md          SLO definitions and the measurements behind them
 docs/runbooks/        One runbook per alert, every command executed before merge
@@ -37,8 +39,9 @@ policy/               Custom Checkov policies + their self-test
 postgres/             Terraform state database bootstrap
 prometheus/           SLO specs (Sloth), generated + hand-written rules and their tests, scrape fragments,
                       Blackbox and Alertmanager config, quadlets for the monitoring side
-terraform/envs/       Root modules: lab (k3s VMs + DNS), lab-base (cloud images), observability (Grafana + SLO
+terraform/envs/       Root modules: lab (k3s VMs + DNS), lab-base (cloud images, VM host keys), observability (Grafana + SLO
                       dashboard), aws (backup bucket, budget), aws-bootstrap (GitHub OIDC trust; human-applied), prod-lab
+terraform/modules/    vm (libvirt + cloud-init, plan tests with a mocked provider), dns-record, grafana-stack
 terraform/lock-test/  Proof that state locking excludes a second writer
 ```
 
@@ -157,7 +160,9 @@ terraform/lock-test/  Proof that state locking excludes a second writer
   cluster so the probe survives a rebuild, and saved plans are per run so concurrent runs cannot apply
   each other's. A new module test caught a bug before merge: the sensitive key would have hidden all
   cloud-init from plan review even on VMs without one. A read-only plan against real state confirmed
-  the change is a no-op until the keys exist.
+  the change is a no-op until the keys exist. Rolled out the same afternoon: the VMs were recreated on
+  their existing disks with the managed keys, and SSH, the k3s converge and the probes all passed with
+  no manual re-pinning.
 - **A real outage, handled blamelessly:** on 2026-11-10 the host's network card hung for 8 h 41 min.
   The external dead man's switch paged within 10 minutes, the only alert that could leave the host.
   The [postmortem](docs/postmortems/2026-11-10-fedora-nic-hang.md) measures the impact from
@@ -169,7 +174,8 @@ terraform/lock-test/  Proof that state locking excludes a second writer
 
 - [ADR 0001: Terraform state backend](docs/decisions/0001-terraform-state-backend.md): tested the
   S3 lock primitive on Garage, found it silently no-ops, moved state locking to Postgres.
-- [ADR 0002: Separate state for long-lived artifacts](docs/decisions/0002-state-layering.md)
+- [ADR 0002: Separate state for long-lived artifacts](docs/decisions/0002-state-layering.md): cloud
+  images survive a rebuild of the VMs; amended by ADR 0011 for the VMs' host keys.
 - [ADR 0003: Policy-as-code layers](docs/decisions/0003-policy-as-code.md): built-in Checkov
   policies evaluated 0 checks on the libvirt/Grafana/DNS code; custom policies are tested against
   violating fixtures. (The AWS roots now get the full built-in set.)
