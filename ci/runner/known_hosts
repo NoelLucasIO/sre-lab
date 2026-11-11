@@ -1,5 +1,4 @@
-# Host keys of the k3s VMs, re-pinned 2026-11-11 after the DR drill rebuild.
-# Verified out-of-band against each VM's disk (sudo LIBGUESTFS_BACKEND=direct virt-cat ... /etc/ssh/ssh_host_ed25519_key.pub).
-k3s-server-1.noellucas.io,192.168.2.40 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHgS1szhg9T9t6OJVMjB64Zsm2ZtnVTIQ0Ho4gu6vByt
-k3s-agent-1.noellucas.io,192.168.2.41 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICeszA3NrpGgkpJz374w4V+dQXRe03qLj8sgLwo0KfP1
-k3s-agent-2.noellucas.io,192.168.2.42 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG2EmdHOJFbD02buWGuuZoSsYoW/HNwu32hDpQmYFz9t
+# Rendered from: terraform -chdir=terraform/envs/lab output -raw known_hosts (ADR 0011). Do not edit.
+k3s-agent-1.noellucas.io,192.168.2.41 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINb76jkoetnuLNASpGwfz7zwWXjlSXrq5x8IqDt48GCq
+k3s-agent-2.noellucas.io,192.168.2.42 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJFtoYlwn7H0fUuW6aIuS2cf1IwJi6z3uDtwczIa8Ymh
+k3s-server-1.noellucas.io,192.168.2.40 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAofC59uELikV1R9sfP/0WUGLq0fqqV3/+mVK5D6tTBH
