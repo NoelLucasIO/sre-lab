@@ -90,3 +90,21 @@ variable "ssh_authorized_keys" {
     error_message = "At least one SSH key is required; password login is disabled."
   }
 }
+
+variable "ssh_host_ed25519_private" {
+  description = "Managed SSH host private key (OpenSSH format), or null to let the VM generate one on first boot (ADR 0011)."
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
+variable "ssh_host_ed25519_public" {
+  description = "Public half of ssh_host_ed25519_private (OpenSSH format, no comment needed)."
+  type        = string
+  default     = null
+  validation {
+    condition     = var.ssh_host_ed25519_public == null || can(regex("^ssh-ed25519 [A-Za-z0-9+/=]+", var.ssh_host_ed25519_public))
+    error_message = "ssh_host_ed25519_public must be an OpenSSH ed25519 public key."
+  }
+}
+

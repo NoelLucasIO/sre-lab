@@ -147,9 +147,17 @@ terraform/lock-test/  Proof that state locking excludes a second writer
   and DNS records) and rebuilt using only the repo, the pipeline and the S3 copy: **RTO 23 min 10 s**
   against a 60-minute target, RPO window 7 h 52 m against 24 h, and no data lost. The restore itself
   took one minute; about ten minutes went to two findings (new SSH host keys on rebuilt VMs, and a
-  regenerated API secret that broke the probe), both being fixed in code. Every step was timestamped by
+  regenerated API secret that broke the probe), both since fixed in code. Every step was timestamped by
   the drill tooling; the [drill record](docs/drills/2026-11-11-dr-drill.md) has the timeline, the
   alerts it fired and seven findings with actions.
+- **Drill findings closed in code, the same day:** host keys now live in the long-lived Terraform
+  layer and reach the VMs through cloud-init, so a rebuild keeps its identity and nothing is trusted on
+  first use; the committed `known_hosts` is a Terraform output, drift-checked nightly
+  ([ADR 0011](docs/decisions/0011-managed-host-keys.md)). The copy's API secret is kept outside the
+  cluster so the probe survives a rebuild, and saved plans are per run so concurrent runs cannot apply
+  each other's. A new module test caught a bug before merge: the sensitive key would have hidden all
+  cloud-init from plan review even on VMs without one. A read-only plan against real state confirmed
+  the change is a no-op until the keys exist.
 - **A real outage, handled blamelessly:** on 2026-11-10 the host's network card hung for 8 h 41 min.
   The external dead man's switch paged within 10 minutes, the only alert that could leave the host.
   The [postmortem](docs/postmortems/2026-11-10-fedora-nic-hang.md) measures the impact from
@@ -180,6 +188,9 @@ terraform/lock-test/  Proof that state locking excludes a second writer
 - [ADR 0010: Backups](docs/decisions/0010-backups.md): two stages because the database is reachable
   only by its owner; write-only and read-only keys and roles; a weekly restore test that needs
   nothing from the lab.
+- [ADR 0011: Managed host keys](docs/decisions/0011-managed-host-keys.md): the VMs' SSH identity lives
+  in the long-lived layer, so a rebuild keeps it and nothing is trusted on first use; found by the
+  DR drill, where re-pinning keys took a quarter of the recovery time.
 
 ## Host
 

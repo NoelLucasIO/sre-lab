@@ -1,5 +1,5 @@
-# Long-lived artifacts (cloud images) live in their own state so `destroy` on envs/lab
-# never throws away a 650 MB download. See docs/decisions/0002-state-layering.md.
+# Long-lived artifacts (cloud images, VM host keys) live in their own state so `destroy` on envs/lab
+# never throws away a 650 MB download or the VMs' host identity. See ADR 0002 and ADR 0011.
 terraform {
   required_version = ">= 1.10"
 
@@ -11,6 +11,10 @@ terraform {
     libvirt = {
       source  = "dmacvicar/libvirt"
       version = "~> 0.9.9"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
     }
   }
 }

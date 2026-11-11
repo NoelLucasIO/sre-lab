@@ -13,6 +13,7 @@ One runbook per alert area; every alert's `runbook_url` points here. Written for
 | `LabEgressDown` | ticket | [monitoring](monitoring.md#labegressdown) |
 | `NightscoutExporterDown`, `BlackboxProbesMissing`, `PrometheusRuleEvaluationFailures`, `Watchdog` | ticket / none | [monitoring](monitoring.md) |
 | healthchecks.io "sre-lab backup dump", "sre-lab backup offsite", "sre-lab restore test" | ticket | [backups](backups.md) |
+| Drift check: "ci/runner/known_hosts differs"; SSH "REMOTE HOST IDENTIFICATION HAS CHANGED" | (CI failure) | [host-keys](host-keys.md) |
 
 **Page** = act now (the 28-day error budget is burning at 13.44× or faster): PagerDuty service `sre-lab-nightscout`, high urgency. **Ticket** = act within a working day: PagerDuty service `sre-lab-tickets`, urgency fixed Low (email, no call).
 
@@ -35,10 +36,10 @@ pq() { curl -s --get localhost:9091/api/v1/query --data-urlencode "query=$1" \
 pq 'slo:period_error_budget_remaining:ratio'
 
 # Cluster-admin view (nodes, other namespaces): over SSH to the k3s server
-ssh nlucas@192.168.2.40 sudo k3s kubectl get nodes -o wide
+ssh -o UserKnownHostsFile=~/sre-lab/ci/runner/known_hosts nlucas@192.168.2.40 sudo k3s kubectl get nodes -o wide
 ```
 
-**One-time prerequisite for the SSH line:** the nodes are rebuilt by Terraform, so their host keys change and `nlucas@fedora` has no `known_hosts` entry for them ("Host key verification failed"). Before the first incident, check each node's key fingerprint on its console (`sudo virsh console k3s-server-1`, then `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`), then connect once and accept it only if it matches. Repeat after any rebuild.
+**Host keys for the SSH line:** the nodes' host keys are managed by Terraform and survive rebuilds ([ADR 0011](../decisions/0011-managed-host-keys.md)); `ci/runner/known_hosts` pins them, so point SSH at it as above rather than accepting a key. If SSH reports a changed host key, see [host-keys](host-keys.md).
 
 Grafana (`fedora:3001`) Explore works for every query here too.
 
