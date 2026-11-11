@@ -12,7 +12,7 @@ Diagram source: [`docs/architecture/sre-lab-architecture.drawio`](docs/architect
 | 1 | Terraform modules, remote state with enforced locking, policy-as-code | **Done** (2026-11-05) |
 | 2 | CI/CD: plan on PR, approval gate, change-risk checks, automatic rollback | **Done** (2026-11-06) |
 | 3 | SLIs/SLOs, multi-window burn-rate alerts, on-call routing, runbooks | **Live** (2026-11-09); alert-tuning week in progress |
-| 4 | AWS via Terraform, offsite backups, timed DR drill, game day, postmortem | **In progress**: AWS foundation (2026-11-09) and offsite backups (2026-11-10) done; first postmortem published; timed DR drill next |
+| 4 | AWS via Terraform, offsite backups, timed DR drill, game day, postmortem | **In progress**: AWS foundation (2026-11-09), offsite backups (2026-11-10) and the timed DR drill (2026-11-11, RTO 23 min against 60) done; first postmortem published; game day next |
 
 ## Layout
 
@@ -143,6 +143,13 @@ terraform/lock-test/  Proof that state locking excludes a second writer
   count against counts recorded at dump time. It needs nothing from the lab, so it proves recovery
   if the whole host is gone. The k3s restore path was rehearsed before the timed drill: 52 seconds
   end to end, every count exact, including a Mongo 4.4 dump into the copy's Mongo 7.0.
+- **Timed DR drill:** on 2026-11-11 the k3s copy was destroyed outright (all three VMs, their disks
+  and DNS records) and rebuilt using only the repo, the pipeline and the S3 copy: **RTO 23 min 10 s**
+  against a 60-minute target, RPO window 7 h 52 m against 24 h, and no data lost. The restore itself
+  took one minute; about ten minutes went to two findings (new SSH host keys on rebuilt VMs, and a
+  regenerated API secret that broke the probe), both being fixed in code. Every step was timestamped by
+  the drill tooling; the [drill record](docs/drills/2026-11-11-dr-drill.md) has the timeline, the
+  alerts it fired and seven findings with actions.
 - **A real outage, handled blamelessly:** on 2026-11-10 the host's network card hung for 8 h 41 min.
   The external dead man's switch paged within 10 minutes, the only alert that could leave the host.
   The [postmortem](docs/postmortems/2026-11-10-fedora-nic-hang.md) measures the impact from
