@@ -16,8 +16,11 @@ Every alert that reached a human (or should have), and whether it needed action.
 | 11-10 09:23 / 09:24 | `TconnectsyncPollFailureBudgetBurn`, `NightscoutCGMFreshnessBudgetBurn` | ticket | Pages resolved, so their tickets were no longer inhibited; 6 h & 3 d windows still held the outage | No | PD #13, #14, resolved by hand 09:44. The alerts kept firing until the 6 h windows emptied (~15:00, ~16:30); `repeat_interval` 24 h, so no re-open |
 | 11-10 10:00 | `TconnectsyncPollFailureBudgetBurn` | page | Planned reboot (kernel update) restarted tconnectsync; restarts count as failures | No | PD #15, resolved 10:01 and again 10:27. Tuning: should a planned restart page? |
 | 11-10 11:06 | `NightscoutCGMFreshnessBudgetBurn` | page | 2-min upstream blip 11:04; the 30 m & 6 h condition still held the night's outage | No | PD #16, resolved 11:06. Tuning: residual pages after a large burn |
+| 11-11 10:27 | `NightscoutAPIAvailabilityBudgetBurn` (k3s-copy) | page | **DR drill**: copy destroyed at 10:22:53 | Drill-caused | PD #21, acked 10:30; kept firing after recovery until the burn windows emptied. Correct behaviour. [Drill record](drills/2026-11-11-dr-drill.md) |
+| 11-11 10:34 | `NightscoutExporterDown` (k3s-copy) | ticket | **DR drill**: exporter gone with the cluster | Drill-caused | PD #22, acked 10:38, auto-resolved 10:44 once the exporter was redeployed. Correct behaviour |
 
 ## Running tally (for the end-of-week decision)
 
 - **Upstream blips after cold start:** 4 tickets on 11-09 (11:55, 13:39, 15:10, 19:10), none needing action. If this continues after the windows hold a clean week, revisit the 10-minute freshness threshold or the ticket windows.
 - **Pages needing no action:** 3 on 11-10 (08:53 late delivery, 10:00 planned reboot, 11:06 residual burn). Tickets needing no action: 2 more on 11-10 (09:23 / 09:24, the outage's tail).
+- **Drill-caused (excluded from the counts above):** 1 page and 1 ticket on 11-11 (PD #21, #22), both correct for a destroyed service.
