@@ -5,7 +5,7 @@ locals {
   h   = md5(var.name)
   mac = format("52:54:00:%s:%s:%s", substr(local.h, 0, 2), substr(local.h, 2, 2), substr(local.h, 4, 2))
 
-  user_data = join("\n", ["#cloud-config", yamlencode({
+  cloud_config = {
     hostname                  = var.name
     fqdn                      = local.fqdn
     prefer_fqdn_over_hostname = false
@@ -13,7 +13,8 @@ locals {
     ssh_pwauth                = false
     disable_root              = true
     # Keep SSH host keys across instance-id changes (any cloud-init edit). The default (true)
-    # regenerates them, which breaks the runner's pinned known_hosts. Keys are still created on first boot.
+    # regenerates them, which breaks the runner's pinned known_hosts. With a managed key (below)
+    # cloud-init writes that key; otherwise keys are still created on first boot.
     ssh_deletekeys = false
     users = [{
       name                = var.admin_user
@@ -25,7 +26,26 @@ locals {
     }]
     packages = ["qemu-guest-agent"]
     runcmd   = [["systemctl", "enable", "--now", "qemu-guest-agent"]]
-  })])
+  }
+
+  # Managed host key (ADR 0011): cloud-init writes this pair instead of generating one, so the VM's
+  # identity is known before it boots and survives a rebuild. Without it, keys are made on first boot.
+  managed_host_key = var.ssh_host_ed25519_public != null
+
+  # Without a managed key this is byte-for-byte the previous user_data, so instance_id is unchanged.
+  user_data_public = join("\n", ["#cloud-config", yamlencode(local.cloud_config)])
+
+  # Sensitive when it carries the private key: plans show "(sensitive value)" for user_data.
+  # Built as a 0-or-1 element list, not a conditional: a conditional that merely mentions the
+  # sensitive variable marks its result sensitive even when the key is absent (caught by tests/).
+  user_data_managed = [for pub in(local.managed_host_key ? [var.ssh_host_ed25519_public] : []) :
+    join("\n", ["#cloud-config", yamlencode(merge(local.cloud_config, {
+      ssh_keys = {
+        ed25519_private = var.ssh_host_ed25519_private
+        ed25519_public  = pub
+      }
+  }))])]
+  user_data = concat(local.user_data_managed, [local.user_data_public])[0]
 
   network_config = yamlencode({
     version = 2
@@ -44,7 +64,8 @@ locals {
 
   # cloud-init runs once per instance-id. Hashing the config into it makes any config change
   # re-run cloud-init on the existing disk instead of being silently ignored.
-  instance_id = "${var.name}-${substr(sha256("${local.user_data}${local.network_config}"), 0, 8)}"
+  # The public key stands in for the private one, so meta_data never becomes sensitive.
+  instance_id = "${var.name}-${substr(sha256("${local.user_data_public}${local.managed_host_key ? var.ssh_host_ed25519_public : ""}${local.network_config}"), 0, 8)}"
 }
 
 resource "libvirt_cloudinit_disk" "this" {

@@ -173,6 +173,9 @@ terraform/lock-test/  Proof that state locking excludes a second writer
 - [ADR 0010: Backups](docs/decisions/0010-backups.md): two stages because the database is reachable
   only by its owner; write-only and read-only keys and roles; a weekly restore test that needs
   nothing from the lab.
+- [ADR 0011: Managed host keys](docs/decisions/0011-managed-host-keys.md): the VMs' SSH identity lives
+  in the long-lived layer, so a rebuild keeps it and nothing is trusted on first use; found by the
+  DR drill, where re-pinning keys took a quarter of the recovery time.
 
 ## Host
 

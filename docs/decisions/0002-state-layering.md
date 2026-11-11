@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-04
+- **Amended by:** [ADR 0011](0011-managed-host-keys.md) (2026-11-11): `envs/lab` reads the VM host keys from `lab_base` state, the one remote-state read between the layers.
 
 ## Context
 

@@ -2,6 +2,10 @@ locals {
   # Must match envs/lab-base output rocky9_path (that layer owns the download).
   rocky9_base = "/990/VM/rocky-9-genericcloud-base.qcow2"
 
+  # Host keys come from envs/lab-base (ADR 0011); see host-keys.tf.
+  host_public_keys  = try(data.terraform_remote_state.lab_base.outputs.k3s_host_public_keys, {})
+  host_private_keys = try(data.terraform_remote_state.lab_base.outputs.k3s_host_private_keys, {})
+
   ssh_keys = [for f in fileset("${path.module}/../../../keys", "*.pub") : trimspace(file("${path.module}/../../../keys/${f}"))]
 
   k3s_nodes = {
@@ -25,6 +29,9 @@ module "k3s_node" {
   dns_servers      = ["192.168.2.45"]
 
   ssh_authorized_keys = local.ssh_keys
+
+  ssh_host_ed25519_private = lookup(local.host_private_keys, each.key, null)
+  ssh_host_ed25519_public  = lookup(local.host_public_keys, each.key, null)
 
   tags = {
     env   = "lab"

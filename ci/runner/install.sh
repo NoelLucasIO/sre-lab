@@ -31,6 +31,7 @@ install -d -o "$U" -g "$U" -m 0700 "$H/.ssh"
 [[ -f $H/.ssh/id_ed25519 ]] || sudo -u "$U" ssh-keygen -q -t ed25519 -N "" -C "$U@$(hostname -f)" -f "$H/.ssh/id_ed25519"
 [[ "$(cut -d' ' -f1,2 "$H/.ssh/id_ed25519.pub")" == "$(cut -d' ' -f1,2 "$HERE/../../keys/gh-runner.pub")" ]] \
   || die "runner key does not match keys/gh-runner.pub; commit the new public key first"
+# The k3s workflow re-installs this from the repo on every converge (ADR 0011).
 install -o "$U" -g "$U" -m 0644 "$HERE/known_hosts" "$H/.ssh/known_hosts"
 printf 'Host k3s-*\n  User nlucas\n  IdentityFile ~/.ssh/id_ed25519\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n' \
   | install -o "$U" -g "$U" -m 0600 /dev/stdin "$H/.ssh/config"

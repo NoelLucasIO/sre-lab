@@ -81,6 +81,23 @@ jobs:
           echo "drifted=${drifted# }" >> "$GITHUB_OUTPUT"
           echo "failed=${failed# }"   >> "$GITHUB_OUTPUT"
 
+      # ADR 0011: the pinned known_hosts in Git must match the host keys Terraform manages.
+      - name: pinned host keys match Terraform
+        if: always() && steps.plan.outcome != 'skipped'
+        run: |
+          set -a; . "$HOME/.config/terraform/pg.env"; set +a
+          want=$(terraform -chdir=terraform/envs/lab output -raw known_hosts 2>/dev/null || true)
+          if [ -z "$want" ]; then
+            echo "::warning::envs/lab has no managed host keys yet (ADR 0011): nothing to compare"
+            exit 0
+          fi
+          if diff <(grep -v '^#' ci/runner/known_hosts | grep . | sort) <(printf '%s' "$want" | sort); then
+            echo "ci/runner/known_hosts matches terraform output known_hosts"
+          else
+            echo "::error::ci/runner/known_hosts differs from envs/lab output known_hosts: re-render it (docs/runbooks/host-keys.md)"
+            exit 1
+          fi
+
       - name: open, update or close the drift issue
         if: always() && steps.plan.outcome != 'skipped'
         uses: actions/github-script@v7

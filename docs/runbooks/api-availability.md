@@ -36,7 +36,10 @@ KC logs deploy/nightscout --previous | tail -30
 ```
 If it started after a deploy: `KC rollout undo deployment/nightscout` and revert the PR. If MongoDB is down (`KC get pods -l app=mongo`), Nightscout cannot start.
 
-**Recreate the probe's header secret** (sha1 of the copy's API secret; never on a command line):
+**Probe gets 401** (the copy's API secret and the probe header disagree, e.g. after a rebuild):
+run `~/sre-lab/ci/nightscout/seed-secret.sh`. The copy's API secret lives in the Podman secret
+`ns-k3s-api-secret`; the script writes it to the cluster and recreates the probe header if it
+does not match. By hand, the header is the sha1 of the copy's API secret (never on a command line):
 ```bash
 podman secret rm ns-k3s-api-hash
 KC get secret nightscout-secrets -o jsonpath='{.data.API_SECRET}' | base64 -d | sha1sum | cut -d' ' -f1 \

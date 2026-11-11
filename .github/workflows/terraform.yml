@@ -1,6 +1,6 @@
 # sre-lab: Terraform pipeline
 #   PR:          static checks (GitHub-hosted) -> plan per root (self-hosted) -> change-risk gate -> sticky PR comment
-#   push main:   static checks -> plan saved on runner disk -> risk report -> apply (environment `lab`, required reviewer)
+#   push main:   static checks -> plan saved on runner disk (one directory per run) -> risk report -> apply (environment `lab`, required reviewer)
 # Plan files never leave the runner (no artifacts): this is a public repo and plan files hold raw values.
 # AWS: short-lived credentials via GitHub OIDC (plan: read-only role; apply: role trusted only for the
 # `lab` environment). The account ID is the repository variable AWS_ACCOUNT_ID.
@@ -25,6 +25,13 @@ on:
 
 permissions:
   contents: read
+
+# One run at a time on main (push and dispatch alike): a second run queues and plans against the
+# state the first one left, instead of racing it to apply. PR runs replace their own older runs.
+# DR drill 2026-11-11, finding 3: two dispatches on one commit shared a plan directory.
+concurrency:
+  group: terraform-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   TF_IN_AUTOMATION: "1"
@@ -64,6 +71,16 @@ jobs:
             echo "::group::validate $r"
             terraform -chdir="terraform/envs/$r" init -backend=false -input=false -no-color >/dev/null
             terraform -chdir="terraform/envs/$r" validate -no-color
+            echo "::endgroup::"
+          done
+
+      - name: module tests (mocked providers)
+        run: |
+          for m in terraform/modules/*/; do
+            ls "$m"tests/*.tftest.hcl >/dev/null 2>&1 || continue
+            echo "::group::test $m"
+            terraform -chdir="$m" init -backend=false -input=false -no-color >/dev/null
+            terraform -chdir="$m" test -no-color
             echo "::endgroup::"
           done
 
@@ -118,8 +135,8 @@ jobs:
           for f in pg grafana technitium aws; do . "$HOME/.config/terraform/$f.env"; done
           set +a
           export TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
-          mkdir -p "$TF_PLUGIN_CACHE_DIR" "$HOME/plans/$GITHUB_SHA"
-          chmod 700 "$HOME/plans" "$HOME/plans/$GITHUB_SHA"
+          mkdir -p "$TF_PLUGIN_CACHE_DIR" "$HOME/plans/$GITHUB_RUN_ID"
+          chmod 700 "$HOME/plans" "$HOME/plans/$GITHUB_RUN_ID"
 
           out="$RUNNER_TEMP/comment.md"
           printf '### Terraform plan for `%s`\n\n' "${GITHUB_SHA::7}" > "$out"
@@ -133,7 +150,7 @@ jobs:
             {
               terraform -chdir="$d" init -input=false -no-color >/dev/null &&
               terraform -chdir="$d" plan -input=false -no-color -lock-timeout=120s \
-                -detailed-exitcode -out="$HOME/plans/$GITHUB_SHA/$r.tfplan"
+                -detailed-exitcode -out="$HOME/plans/$GITHUB_RUN_ID/$r.tfplan"
             } > "$log" 2>&1
             rc=$?
             set -e
@@ -143,7 +160,7 @@ jobs:
               *) status="<b>FAILED (exit $rc)</b>"; failed="$failed $r" ;;
             esac
             if [ "$rc" = 2 ]; then
-              terraform -chdir="$d" show -json "$HOME/plans/$GITHUB_SHA/$r.tfplan" > "$RUNNER_TEMP/$r.plan.json"
+              terraform -chdir="$d" show -json "$HOME/plans/$GITHUB_RUN_ID/$r.tfplan" > "$RUNNER_TEMP/$r.plan.json"
               printf '%s ' "$r=$RUNNER_TEMP/$r.plan.json" >> "$RUNNER_TEMP/specs"
             fi
             {
@@ -236,7 +253,7 @@ jobs:
           for f in pg grafana technitium aws; do . "$HOME/.config/terraform/$f.env"; done
           set +a
           export TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
-          dir="$HOME/plans/$GITHUB_SHA"
+          dir="$HOME/plans/$GITHUB_RUN_ID"
           for r in $ROOTS; do
             case " $CHANGED " in *" $r "*) ;; *) continue ;; esac
             echo "::group::apply $r"
