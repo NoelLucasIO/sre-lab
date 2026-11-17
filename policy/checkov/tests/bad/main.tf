@@ -7,13 +7,6 @@ resource "libvirt_domain" "exposed_console" {
   }
 }
 
-resource "technitium_record" "unowned" {
-  zone  = "noellucas.io"
-  name  = "bad.noellucas.io"
-  type  = "A"
-  value = "192.0.2.1"
-}
-
 resource "grafana_data_source" "insecure" {
   type              = "prometheus"
   name              = "bad"

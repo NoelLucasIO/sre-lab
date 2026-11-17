@@ -1,6 +1,6 @@
 # ADR 0012: Lab VM DNS is owned by NIOS IPAM, not Terraform
 
-**Status:** accepted (2026-11-17) · **Phase:** 4 · Supersedes the DNS part of `envs/lab` (Phase 1 `dns-record` module)
+**Status:** accepted (2026-11-17) · forget applied in #44 · cleanup in #45 · **Phase:** 4 · Supersedes the DNS part of `envs/lab` (Phase 1 `dns-record` module)
 
 ## Context
 

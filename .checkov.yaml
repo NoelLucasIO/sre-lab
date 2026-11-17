@@ -1,6 +1,6 @@
 # Run from repo root: `checkov --config-file .checkov.yaml`
 # Built-in Checkov policies (all of them) plus this repo's own in policy/checkov.
-# Built-ins cover AWS (envs/aws, envs/aws-bootstrap) but not libvirt/Grafana/Technitium; those are
+# Built-ins cover AWS (envs/aws, envs/aws-bootstrap) but not libvirt/Grafana; those are
 # enforced by the custom CKV2_SRELAB_* policies, proven by policy/test.sh.
 # Every skip is inline next to the resource, with its reason (`#checkov:skip=ID:reason`).
 directory:

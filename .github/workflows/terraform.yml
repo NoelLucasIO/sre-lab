@@ -132,7 +132,7 @@ jobs:
         id: plan
         run: |
           set -a
-          for f in pg grafana technitium aws; do . "$HOME/.config/terraform/$f.env"; done
+          for f in pg grafana aws; do . "$HOME/.config/terraform/$f.env"; done
           set +a
           export TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
           mkdir -p "$TF_PLUGIN_CACHE_DIR" "$HOME/plans/$GITHUB_RUN_ID"
@@ -250,7 +250,7 @@ jobs:
           CHANGED: ${{ needs.plan.outputs.changed }}
         run: |
           set -a
-          for f in pg grafana technitium aws; do . "$HOME/.config/terraform/$f.env"; done
+          for f in pg grafana aws; do . "$HOME/.config/terraform/$f.env"; done
           set +a
           export TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
           dir="$HOME/plans/$GITHUB_RUN_ID"

@@ -7,14 +7,6 @@ resource "libvirt_domain" "local_console" {
   }
 }
 
-resource "technitium_record" "owned" {
-  zone     = "noellucas.io"
-  name     = "good.noellucas.io"
-  type     = "A"
-  value    = "192.0.2.2"
-  comments = "managed-by=terraform repo=sre-lab"
-}
-
 resource "grafana_data_source" "secure" {
   type              = "prometheus"
   name              = "good"

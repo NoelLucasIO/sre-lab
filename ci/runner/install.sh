@@ -21,7 +21,7 @@ id -nG "$U" | grep -qw wheel && die "$U must not be in wheel"
 
 log "Least-privilege credentials (never .pgpass or nlucas's SSH keys)"
 install -d -o "$U" -g "$U" -m 0700 "$H/.config" "$H/.config/terraform" "$H/.terraform.d" "$H/.terraform.d/plugin-cache"
-for f in pg.env grafana.env technitium.env; do
+for f in pg.env grafana.env; do
   [[ -s $SRC_CFG/$f ]] || die "missing $SRC_CFG/$f"
   install -o "$U" -g "$U" -m 0600 "$SRC_CFG/$f" "$H/.config/terraform/$f"
 done
