@@ -1,8 +1,11 @@
-# Forward + reverse records for every k3s node, driven by the same map as the VMs.
-module "k3s_dns" {
-  source   = "../../modules/dns-record"
-  for_each = local.k3s_nodes
+# k3s node DNS is owned by NIOS IPAM since the 2026-11-16 cutover (ADR 0012).
+# Forget the old Technitium records without deleting them: Technitium is now a
+# read-only secondary of NIOS, and the same records live in the primary.
+# Remove this block, the technitium provider and modules/dns-record once applied.
+removed {
+  from = module.k3s_dns
 
-  name = each.key
-  ipv4 = each.value.ip
+  lifecycle {
+    destroy = false
+  }
 }

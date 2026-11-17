@@ -28,7 +28,7 @@ jobs:
     name: ansible syntax
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-python@v5
         with:
@@ -76,7 +76,7 @@ jobs:
       group: tf-apply         # shared with terraform apply: one change to the lab at a time
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Pinned Ansible venv (cached in the runner home, keyed by the pins)
         run: |
