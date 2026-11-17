@@ -39,7 +39,7 @@ policy/               Custom Checkov policies + their self-test
 postgres/             Terraform state database bootstrap
 prometheus/           SLO specs (Sloth), generated + hand-written rules and their tests, scrape fragments,
                       Blackbox and Alertmanager config, quadlets for the monitoring side
-terraform/envs/       Root modules: lab (k3s VMs + DNS), lab-base (cloud images, VM host keys), observability (Grafana + SLO
+terraform/envs/       Root modules: lab (k3s VMs; DNS moved to NIOS, ADR 0012), lab-base (cloud images, VM host keys), observability (Grafana + SLO
                       dashboard), aws (backup bucket, budget), aws-bootstrap (GitHub OIDC trust; human-applied), prod-lab
 terraform/modules/    vm (libvirt + cloud-init, plan tests with a mocked provider), dns-record, grafana-stack
 terraform/lock-test/  Proof that state locking excludes a second writer
@@ -197,6 +197,9 @@ terraform/lock-test/  Proof that state locking excludes a second writer
 - [ADR 0011: Managed host keys](docs/decisions/0011-managed-host-keys.md): the VMs' SSH identity lives
   in the long-lived layer, so a rebuild keeps it and nothing is trusted on first use; found by the
   DR drill, where re-pinning keys took a quarter of the recovery time.
+- [ADR 0012: DNS owned by NIOS](docs/decisions/0012-dns-owned-by-nios.md): after the home lab's
+  cutover to Infoblox NIOS, `envs/lab` forgets its Technitium records instead of managing a read-only
+  secondary; found by the nightly drift check.
 
 ## Host
 

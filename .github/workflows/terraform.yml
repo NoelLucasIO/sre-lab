@@ -48,7 +48,7 @@ jobs:
     name: static checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -119,7 +119,7 @@ jobs:
       changed: ${{ steps.plan.outputs.changed }}
       failed: ${{ steps.plan.outputs.failed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: AWS credentials (read-only plan role)
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
@@ -194,7 +194,7 @@ jobs:
 
       - name: post plan to PR
         if: always() && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
@@ -235,7 +235,7 @@ jobs:
       contents: read
       id-token: write   # GitHub OIDC -> AWS role sre-lab-apply, trusted only for the `lab` environment
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: AWS credentials (apply role)
         if: contains(format(' {0} ', needs.plan.outputs.changed), ' aws ')
