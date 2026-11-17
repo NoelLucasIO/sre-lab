@@ -22,14 +22,14 @@ a fork PR can rewrite the workflow and execute arbitrary code on the runner host
    private `/tmp` and devices.
 4. **Secrets stay on the runner host, not in GitHub.** The runner holds its own copies of the
    least-privilege credentials: the `tfstate` role (no superuser), the Grafana service account,
-   and the Technitium token (Zones-only, two zones). GitHub Actions secrets hold none of them,
+   and the Technitium token (Zones-only, two zones; removed 2026-11-17, ADR 0012). GitHub Actions secrets hold none of them,
    so a workflow on a GitHub-hosted runner cannot exfiltrate them.
 
 ## Blast radius if a runner job is compromised
 
 | Reachable | Not reachable |
 |---|---|
-| lab VMs via libvirt, Terraform state (`tfstate` DB), records in two DNS zones, the Grafana org via its service account | Postgres superuser (`.pgpass`), `nlucas` SSH/GitHub keys, other containers, sudo/root, other DNS settings |
+| lab VMs via libvirt, Terraform state (`tfstate` DB), the Grafana org via its service account | Postgres superuser (`.pgpass`), `nlucas` SSH/GitHub keys, other containers, sudo/root, other DNS settings |
 
 ## Known residual risk
 

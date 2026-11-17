@@ -29,7 +29,7 @@ a destroy of `envs/lab` must not be able to touch shared observability.
 ## Consequences
 
 - `terraform destroy` in `envs/lab` is now safe without `-target`.
-- Each root's lock file only pins the providers it uses (lab: libvirt + technitium;
+- Each root's lock file only pins the providers it uses (lab: libvirt, plus technitium until ADR 0012;
   observability: grafana), so a provider bump has a smaller blast radius.
 - CI runs each root as a separate job with its own credentials; the VM job never needs the
   Grafana token.

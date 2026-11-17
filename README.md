@@ -39,9 +39,9 @@ policy/               Custom Checkov policies + their self-test
 postgres/             Terraform state database bootstrap
 prometheus/           SLO specs (Sloth), generated + hand-written rules and their tests, scrape fragments,
                       Blackbox and Alertmanager config, quadlets for the monitoring side
-terraform/envs/       Root modules: lab (k3s VMs; DNS moved to NIOS, ADR 0012), lab-base (cloud images, VM host keys), observability (Grafana + SLO
+terraform/envs/       Root modules: lab (k3s VMs; their DNS lives in NIOS IPAM, ADR 0012), lab-base (cloud images, VM host keys), observability (Grafana + SLO
                       dashboard), aws (backup bucket, budget), aws-bootstrap (GitHub OIDC trust; human-applied), prod-lab
-terraform/modules/    vm (libvirt + cloud-init, plan tests with a mocked provider), dns-record, grafana-stack
+terraform/modules/    vm (libvirt + cloud-init, plan tests with a mocked provider), grafana-stack
 terraform/lock-test/  Proof that state locking excludes a second writer
 ```
 
@@ -49,7 +49,7 @@ terraform/lock-test/  Proof that state locking excludes a second writer
 
 - **State locking:** a second writer is refused (`terraform/lock-test/run.sh`, PASS); S3 lockfile on Garage
   silently does not lock (ADR 0001).
-- **Modules:** `vm` (libvirt + cloud-init), `dns-record` (Technitium A + PTR), `grafana-stack`
+- **Modules:** `vm` (libvirt + cloud-init), `dns-record` (Technitium A + PTR; retired 2026-11-17, ADR 0012), `grafana-stack`
   (hand-built Prometheus data source and dashboard adopted via `import`, then `plan`: no changes).
 - **Policy-as-code:** tflint (preset `all`) clean; custom Checkov policies proven against
   violating fixtures by `policy/test.sh` (ADR 0003).

@@ -110,7 +110,7 @@
         <mxCell id="pg" value="&lt;b&gt;PostgreSQL 18&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;Terraform state +&lt;br&gt;advisory locks (proven)&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#A78BFA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_plat">
           <mxGeometry x="15" y="141" width="230" height="74" as="geometry"/>
         </mxCell>
-        <mxCell id="dns" value="&lt;b&gt;Technitium DNS&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;A + PTR records via&lt;br&gt;zones-only API token&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#A78BFA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_plat">
+        <mxCell id="dns" value="&lt;b&gt;Infoblox NIOS DNS&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94A3B8&quot;&gt;k3s A + PTR in NIOS IPAM (ADR 0012);&lt;br&gt;Technitium = secondary&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#A78BFA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_plat">
           <mxGeometry x="255" y="141" width="230" height="74" as="geometry"/>
         </mxCell>
         <mxCell id="iac" value="&lt;b&gt;Terraform roots&lt;/b&gt;&lt;font color=&quot;#94A3B8&quot;&gt;: lab-base (images, VM host keys) · lab (CI-only) · observability · aws-bootstrap (human-applied) · aws (CI)&lt;/font&gt;&lt;br&gt;&lt;b&gt;Policy-as-code&lt;/b&gt;&lt;font color=&quot;#94A3B8&quot;&gt;: tflint · custom Checkov policies tested against violating fixtures · change-risk gate blocks &amp;gt;2 destroys or anything tagged critical&lt;/font&gt;" style="rounded=1;arcSize=8;html=1;whiteSpace=wrap;fillColor=#1E293B;strokeColor=#A78BFA;strokeWidth=2;fontColor=#F1F5F9;fontSize=11;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="g_plat">
@@ -188,9 +188,6 @@
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#A78BFA;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="runner" target="pg">
-          <mxGeometry relative="1" as="geometry"/>
-        </mxCell>
-        <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#A78BFA;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="runner" target="dns">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="e6" value="pump +&lt;br&gt;CGM" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;jumpStyle=arc;jumpSize=8;strokeColor=#94A3B8;strokeWidth=2;endArrow=blockThin;endFill=1;fontColor=#E2E8F0;fontSize=11;labelBackgroundColor=#0B1220;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="g_up" target="g_live">

@@ -30,7 +30,7 @@ Three layers, each enforcing what it can actually evaluate:
 |---|---|---|
 | Terraform `validation` / `precondition` | every `plan` | VM tags (env/role/owner), SSH keys present, name formats, IPs in reverse zone, dashboard UIDs, alert `runbook_url` |
 | tflint (`.tflint.hcl`) | pre-merge | pinned versions, typed + documented variables/outputs, standard module layout, unused code |
-| Checkov custom policies (`policy/checkov`) | pre-merge | VNC console loopback-only, DNS records tagged `managed-by=terraform`, Grafana data sources never skip TLS verification |
+| Checkov custom policies (`policy/checkov`) | pre-merge | VNC console loopback-only, DNS records tagged `managed-by=terraform` (retired with the module, ADR 0012), Grafana data sources never skip TLS verification |
 
 `policy/test.sh` runs each custom policy against `tests/bad` (must fail) and `tests/good`
 (must pass). CI runs it before trusting a Checkov result.
