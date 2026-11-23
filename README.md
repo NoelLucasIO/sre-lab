@@ -1,7 +1,8 @@
 # sre-lab
 
-A home-lab reliability platform, built the way production should be. The service under management
-is a Nightscout + tconnectsync stack, so every SLO, alert and drill measures real data.
+A home-lab reliability platform, built the way production should be. Phases 2 to 4 were built around a
+Nightscout + tconnectsync stack, which was **retired on 2026-11-23**: its pipeline, SLOs, backups and
+exporter were removed from the repo. The evidence below is the record of that work; the code is in git history.
 
 ![sre-lab architecture](docs/architecture/sre-lab-architecture.png)
 
@@ -17,30 +18,23 @@ Diagram source: [`docs/architecture/sre-lab-architecture.drawio`](docs/architect
 ## Layout
 
 ```
-.github/workflows/    terraform (plan/gate/apply) · drift (nightly) · k3s (Ansible) · nightscout (deploy + rollback)
-                      exporter (test, build, GHCR) · rules (Sloth drift, promtool tests, Alertmanager routing)
-                      backup (script tests on PRs, nightly offsite copy to S3, weekly restore test)
-backup/               Nightscout backups: mongodump timer (fedora), offsite copy, restore check + self-test
-ansible/              k3s via the pinned k3s.orchestration collection; namespace-scoped deployer for the app pipeline
-ci/                   change-risk gate, self-hosted runner install and pinned VM host keys (rendered from Terraform),
-                      Nightscout deploy/health/rollback scripts + tests, copy secret seeding
+.github/workflows/    terraform (plan/gate/apply) · drift (nightly) · k3s (Ansible) · rules (promtool tests, Alertmanager routing)
+ansible/              k3s via the pinned k3s.orchestration collection
+ci/                   change-risk gate, self-hosted runner install and pinned VM host keys (rendered from Terraform)
 docs/decisions/       Architecture decision records
-docs/architecture/    Architecture diagram (draw.io source + PNG export)
+docs/architecture/    Architecture diagram (draw.io source + PNG export; predates the Nightscout retirement)
 drill/                DR drill tooling: `mark` (step timestamps and elapsed-time report)
 docs/drills/          DR drill records: timeline, RTO/RPO against target, alerts, findings with actions
 docs/postmortems/     Blameless postmortems · docs/alert-log.md: every alert and whether it needed action
-docs/slos.md          SLO definitions and the measurements behind them
 docs/runbooks/        One runbook per alert, every command executed before merge
-exporter/             Nightscout SLI exporter (stdlib Python, tests, Dockerfile)
-garage/               Garage S3 (rootless Podman quadlet), local backup tier and its scoped keys
-k8s/nightscout/       Nightscout, MongoDB and tconnectsync on k3s (kustomize, digest-pinned images)
+garage/               Garage S3 (rootless Podman quadlet)
 keys/                 Public SSH keys baked into VMs by cloud-init
 policy/               Custom Checkov policies + their self-test
 postgres/             Terraform state database bootstrap
-prometheus/           SLO specs (Sloth), generated + hand-written rules and their tests, scrape fragments,
-                      Blackbox and Alertmanager config, quadlets for the monitoring side
-terraform/envs/       Root modules: lab (k3s VMs; their DNS lives in NIOS IPAM, ADR 0012), lab-base (cloud images, VM host keys), observability (Grafana + SLO
-                      dashboard), aws (backup bucket, budget), aws-bootstrap (GitHub OIDC trust; human-applied), prod-lab
+prometheus/           Lab-wide rules and their tests, scrape fragments, Blackbox and Alertmanager config,
+                      quadlets for the monitoring side
+terraform/envs/       Root modules: lab (k3s VMs; their DNS lives in NIOS IPAM, ADR 0012), lab-base (cloud images, VM host keys), observability (Grafana +
+                      dashboards), aws (backup bucket, budget), aws-bootstrap (GitHub OIDC trust; human-applied), prod-lab
 terraform/modules/    vm (libvirt + cloud-init, plan tests with a mocked provider), grafana-stack
 terraform/lock-test/  Proof that state locking excludes a second writer
 ```
@@ -94,7 +88,7 @@ terraform/lock-test/  Proof that state locking excludes a second writer
   minutes (read in its source). The SLO was split by who can act: poll success (ours, pages) and
   end-to-end latency (mostly upstream, ticket only). A fix (fixed 5-minute polling) runs on the
   copy as an A/B test against the live instance before it touches production
-  ([`docs/slos.md`](docs/slos.md)).
+  (`docs/slos.md`, now in git history).
 - **Freshness target validated against history:** 99.24% over 5 days; the only budget spent was a
   CGM sensor change, matched to the minute. Both instances go stale together during a sensor
   warm-up, so an inhibit rule keeps it from paging while the SLO still counts it.

@@ -1,0 +1,55 @@
+# promtool test rules prometheus/rules/tests/lab_test.yml
+# Synthetic series through the lab-wide guard rules: what tickets, and what must stay quiet.
+# (The Nightscout SLO tests were retired with the Nightscout monitoring, 2026-11-23.)
+rule_files:
+  - ../inputs.yml
+evaluation_interval: 30s
+
+tests:
+  # --- Egress -----------------------------------------------------------------------------
+  - name: fedora offline for 20 min tickets, and keeps firing past recovery (2026-11-10)
+    interval: 30s
+    input_series:
+      # Both egress probes fail for 20 min, then fedora is back online.
+      - series: 'probe_success{job="blackbox-egress",instance="https://www.cloudflare.com/cdn-cgi/trace"}'
+        values: '0x40 1x80'
+      - series: 'probe_success{job="blackbox-egress",instance="https://www.google.com/generate_204"}'
+        values: '0x40 1x80'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: LabEgressDown
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: LabEgressDown
+        exp_alerts: &egress
+          - exp_labels: {severity: ticket, category: monitoring}
+            exp_annotations:
+              summary: "fedora could not reach the internet."
+              runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/monitoring.md#labegressdown"
+      - eval_time: 30m          # recovered at 20m; still firing so the ticket can be delivered
+        alertname: LabEgressDown
+        exp_alerts: *egress
+      - eval_time: 37m          # keep_firing_for (15m) has run out
+        alertname: LabEgressDown
+        exp_alerts: []
+
+  # --- Guards -----------------------------------------------------------------------------
+  - name: rule failures ticket; the watchdog always fires
+    interval: 30s
+    input_series:
+      - series: 'prometheus_rule_evaluation_failures_total{job="prometheus",instance="localhost:9091",rule_group="x"}'
+        values: '0x10 1x60'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: PrometheusRuleEvaluationFailures
+        exp_alerts:
+          - exp_labels: {severity: ticket, category: monitoring, job: prometheus, instance: "localhost:9091", rule_group: x}
+            exp_annotations:
+              summary: "Rule group x is failing to evaluate."
+              runbook_url: "https://github.com/NoelLucasIO/sre-lab/blob/main/docs/runbooks/monitoring.md"
+      - eval_time: 1m
+        alertname: Watchdog
+        exp_alerts:
+          - exp_labels: {severity: none, category: monitoring}
+            exp_annotations:
+              summary: "Heartbeat: the alerting pipeline is working."

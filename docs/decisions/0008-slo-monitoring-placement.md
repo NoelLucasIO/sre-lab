@@ -2,6 +2,8 @@
 
 **Status:** Accepted, 2026-11-08
 
+**Amended 2026-11-23:** the Nightscout SLOs were retired. The placement still holds for the remaining lab-wide rules (`prometheus/rules/inputs.yml`).
+
 ## Context
 
 Phase 3 puts SLOs and burn-rate alerts on the Nightscout copy in k3s (ADR 0007): data freshness, API availability and tconnectsync sync latency. The first choice is where the Prometheus that evaluates them runs.

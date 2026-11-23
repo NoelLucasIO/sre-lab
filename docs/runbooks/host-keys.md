@@ -42,6 +42,6 @@ Remove `prevent_destroy` for that resource in a PR, `-replace` it in `envs/lab-b
 1. Merge the PR. Its `terraform` run creates the keys in `envs/lab-base`; `envs/lab` plans no change yet (it read `lab_base` before the apply) and warns `host_keys_managed`.
 2. Dispatch the `terraform` workflow and approve `lab`: the three VMs are recreated on their existing disks and boot with the managed keys. The copy restarts (expect its pages).
 3. Re-render `ci/runner/known_hosts` as above and merge that PR.
-4. Dispatch the `k3s` workflow: it installs the new file on the runner and converges. Run `ci/nightscout/seed-secret.sh` to prove the `nlucas` path too.
+4. Dispatch the `k3s` workflow: it installs the new file on the runner and converges.
 
 Between steps 2 and 3, anything that SSHes to the VMs fails strict host-key checking. Keep the gap short.

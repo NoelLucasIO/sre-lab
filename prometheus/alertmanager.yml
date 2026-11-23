@@ -1,13 +1,13 @@
-# Alertmanager for the sre-lab SLOs (ADR 0008). Deployed to /990/alertmanager/config/alertmanager.yml
+# Alertmanager for sre-lab (ADR 0008). Deployed to /990/alertmanager/config/alertmanager.yml
 # (the directory is mounted read-only by prometheus/alertmanager.container); apply with
 # `curl -X POST 127.0.0.1:9095/-/reload`. Routing is tested by
 # prometheus/alertmanager-test.sh (CI: .github/workflows/rules.yml).
 #
-#   severity=page    -> PagerDuty service sre-lab-nightscout, severity critical (high urgency)
+#   severity=page    -> PagerDuty page service (still named sre-lab-nightscout), severity critical
 #   severity=ticket  -> PagerDuty service sre-lab-tickets, urgency fixed Low (email). Urgency comes
 #                       from routing, not from PagerDuty's severity-based urgency (a plan feature).
 #   Watchdog         -> healthchecks.io ping every minute (external dead man's switch)
-#   info / none      -> nowhere (UpstreamCGMStale is used only to inhibit)
+#   info / none      -> nowhere
 # The two PagerDuty Events API v2 routing keys and the healthchecks.io ping URL are Podman
 # secrets mounted as files; none is in this file or the repo.
 global:
@@ -38,12 +38,6 @@ route:
       receiver: blackhole
 
 inhibit_rules:
-  # Sensor warm-up, phone or Dexcom Share: both instances stale while fedora is online, so not
-  # ours (UpstreamCGMStale checks egress: postmortem 2026-11-10). The budget is still spent (the
-  # SLO stays user-facing), but nobody gets paged for a sensor change.
-  - source_matchers: ['alertname="UpstreamCGMStale"']
-    target_matchers: ['alertname="NightscoutCGMFreshnessBudgetBurn"', 'severity="page"']
-    equal: [instance]
   # A page already covers the same SLO: drop its ticket.
   - source_matchers: ['severity="page"']
     target_matchers: ['severity="ticket"']

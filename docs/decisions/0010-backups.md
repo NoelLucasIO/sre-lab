@@ -2,6 +2,8 @@
 
 **Status:** accepted (2026-11-10) · **Phase:** 4, step 2
 
+**Retired 2026-11-23:** Nightscout is no longer run; its backup pipeline was removed from the repo (see git history). The S3 bucket and its IAM roles (`envs/aws`, `envs/aws-bootstrap`) are unchanged. Kept as a record.
+
 ## Context
 
 - The service to protect is the **live** Nightscout database: MongoDB 4.4 in a rootless Podman pod on fedora, 2.9 MiB today (about 2,000 CGM entries and 2,200 treatments, growing by roughly 300 documents a day). Mongo is not published on any port; only the user who owns the pod (`nlucas`) can reach it.
