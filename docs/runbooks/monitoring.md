@@ -1,37 +1,27 @@
 # Monitoring itself
 
-**Alerts:** `NightscoutExporterDown`, `BlackboxProbesMissing`, `LabEgressDown`, `PrometheusRuleEvaluationFailures` (ticket), `Watchdog` (always firing)
-**Why they matter:** when a signal disappears, the SLOs do not turn red, they go silent. These alerts make "blind" visible.
-
-## NightscoutExporterDown
-
-```bash
-pq 'up{job="nightscout-exporter"}'        # which instance: k3s-copy or live
-```
-
-- **k3s-copy:** `KC get pods -l app=ns-exporter`; `KC logs deploy/ns-exporter --tail=30`. Through the ingress: `curl -s http://192.168.2.40/nsexporter/metrics | head`. The target is node .40 only: if that node is down, this alert fires too (see [api-availability](api-availability.md) for node checks).
-- **live:** `systemctl --user status ns-exporter-live --no-pager`; `podman logs --tail 30 ns-exporter-live`; `curl -s 127.0.0.1:9102/metrics | head`. Restart: `systemctl --user restart ns-exporter-live`.
-- `ns_exporter_errors_total{source="api"}` rising: the exporter runs but cannot read Nightscout (wrong secret gives 401 in its log).
+**Alerts:** `BlackboxProbesMissing`, `LabEgressDown`, `PrometheusRuleEvaluationFailures` (ticket), `Watchdog` (always firing)
+**Why they matter:** when a signal disappears, nothing turns red, it goes silent. These alerts make "blind" visible.
 
 ## BlackboxProbesMissing
 
 ```bash
 systemctl --user status blackbox --no-pager | grep Active
 podman logs --tail 30 blackbox
-curl -s '127.0.0.1:9115/probe?module=ns_live&target=http://127.0.0.1:1337/api/v1/status.json' | grep probe_success
+curl -s '127.0.0.1:9115/probe?module=egress&target=https://www.google.com/generate_204' | grep probe_success
 ```
 
-Config: `/990/blackbox/blackbox.yml` (repo: `prometheus/blackbox.yml`). Header secrets: Podman secrets `ns-k3s-api-hash`, `ns-live-api-hash`.
+Config: `/990/blackbox/blackbox.yml` (repo: `prometheus/blackbox.yml`).
 
 ## LabEgressDown
 
-fedora could not reach the internet: neither egress probe (Cloudflare, Google, by host name) answered for 5 minutes. While that lasts, **nothing can page**: Alertmanager cannot reach PagerDuty, so healthchecks.io pages instead (the heartbeat stops). This ticket arrives after recovery (it keeps firing for 15 minutes) as the record. Expect every SLO to burn at once: the k3s nodes are VMs on fedora's bridge, so both Nightscout instances and both tconnectsyncs lose their upstream together.
+fedora could not reach the internet: neither egress probe (Cloudflare, Google, by host name) answered for 5 minutes. While that lasts, **nothing can page**: Alertmanager cannot reach PagerDuty, so healthchecks.io pages instead (the heartbeat stops). This ticket arrives after recovery (it keeps firing for 15 minutes) as the record.
 
 On fedora's console (the network is down, so SSH from elsewhere will not work):
 
 ```bash
 pq 'probe_success{job="blackbox-egress"}'                      # 0 for both = offline
-ip -br link show enp0s31f6; ping -c2 -W1 192.168.2.1; ping -c2 -W2 1.1.1.1; getent hosts share2.dexcom.com
+ip -br link show enp0s31f6; ping -c2 -W1 192.168.2.1; ping -c2 -W2 1.1.1.1; getent hosts www.google.com
 journalctl -k --since -2h | grep -E 'e1000e.*(Hang|Reset|Link)' | tail -5
 ```
 
@@ -40,7 +30,7 @@ journalctl -k --since -2h | grep -E 'e1000e.*(Hang|Reset|Link)' | tail -5
 - **Gateway answers, 1.1.1.1 does not:** OPNsense WAN or the ISP. Check from another host too.
 - **1.1.1.1 answers, names do not resolve:** DNS (Technitium).
 
-After recovery: log it in [`docs/alert-log.md`](../alert-log.md). Expect late pages and tickets for the burn-rate alerts: the 6-hour windows keep them firing for hours after the outage, and even a 2-minute upstream blip in that time can page (2026-11-10, 11:06).
+After recovery: log it in [`docs/alert-log.md`](../alert-log.md).
 
 ## PrometheusRuleEvaluationFailures
 
@@ -54,7 +44,7 @@ for g in json.load(sys.stdin)["data"]["groups"]:
 podman exec prometheus prometheus --version | head -1      # the version fedora runs now
 ```
 
-Fix the rule in the repo (`prometheus/slo/` or `prometheus/rules/inputs.yml`), bump `PROMETHEUS_IMAGE` in `.github/workflows/rules.yml` to the version fedora now runs so CI tests it, merge, copy the files to `/990/prometheus/config/sre-lab/rules/`, then `podman exec prometheus promtool check config /etc/prometheus/prometheus.yml && ~/reload-prometheus.sh`.
+Fix the rule in the repo (`prometheus/rules/inputs.yml`), bump `PROMETHEUS_IMAGE` in `.github/workflows/rules.yml` to the version fedora now runs so CI tests it, merge, copy the files to `/990/prometheus/config/sre-lab/rules/`, then `podman exec prometheus promtool check config /etc/prometheus/prometheus.yml && ~/reload-prometheus.sh`.
 
 ## Watchdog and the heartbeat (healthchecks.io)
 
@@ -73,10 +63,8 @@ Configs are mounted as **directories**, so a reload sees a replaced file. (A sin
 
 | Repo | fedora |
 |---|---|
-| `prometheus/rules/inputs.yml`, `prometheus/rules/sloth/*.yml` | `/990/prometheus/config/sre-lab/rules/…` (via `rule_files` in `prometheus.yml`) |
+| `prometheus/rules/inputs.yml` | `/990/prometheus/config/sre-lab/rules/…` (via `rule_files` in `prometheus.yml`) |
 | `prometheus/scrape/*.yml` | `/990/prometheus/config/sre-lab/scrape/` (via `scrape_config_files`) |
 | `prometheus/blackbox.yml` | `/990/blackbox/blackbox.yml` (directory mounted) |
 | `prometheus/alertmanager.yml` | `/990/alertmanager/config/alertmanager.yml` (directory mounted); apply with `curl -X POST 127.0.0.1:9095/-/reload` |
 | `prometheus/*.container` | `~/.config/containers/systemd/` |
-| `backup/ns-backup.sh` | `~/.local/bin/ns-backup` ([backups](backups.md)) |
-| `backup/ns-backup.service`, `backup/ns-backup.timer` | `~/.config/systemd/user/` |

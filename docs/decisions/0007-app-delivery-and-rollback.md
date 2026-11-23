@@ -2,6 +2,8 @@
 
 **Status:** Accepted, 2026-11-06
 
+**Retired 2026-11-23:** Nightscout is no longer run; the pipeline, manifests and deployer this ADR describes were removed from the repo (see git history). Kept as a record.
+
 ## Context
 
 Phase 2 needs an application pipeline that can undo a bad release with no one at the keyboard. The service is Nightscout, which runs today as a rootless Podman pod on fedora (quadlets, `ns.noellucas.io`): Nightscout 15.0.9, MongoDB 4.4, tconnectsync. Glucose readings arrive through Nightscout's own Dexcom Share bridge; tconnectsync adds pump data from Tandem Source.
