@@ -1,8 +1,13 @@
-# Blackbox Exporter modules. Deployed to /990/blackbox/blackbox.yml (its own directory: Prometheus
-# relabels its config dir with :Z on restart), mounted read-only by prometheus/blackbox.container.
+# Blackbox Exporter modules: egress (LabEgressDown) and the DNS resolver probes.
 # The Nightscout API modules (ns_copy, ns_live) were retired on 2026-11-23.
+# Deployed to /990/blackbox/blackbox.yml (its own directory: Prometheus relabels its config dir
+# with :Z on restart), mounted read-only by
+# prometheus/blackbox.container. A probe succeeds only if the authenticated API answers 2xx with
+# "status":"ok" in the body, so a proxy error page or a login redirect is not "available".
+# The api-secret header (sha1 of API_SECRET, which is itself a credential) is read from Podman
+# secrets mounted as files; it never appears in this file or on a command line.
 modules:
-  # Can fedora reach the internet? Probed by host name, so a DNS failure counts as "offline" too.
+  # Can fedora reach the internet? Probed by host name, so a DNS failure counts as "offline" too
   # Any 2xx is enough: this measures the path, not the site. Used by LabEgressDown
   # (postmortem 2026-11-10).
   egress:
@@ -11,3 +16,41 @@ modules:
     http:
       preferred_ip_protocol: ip4
       follow_redirects: false
+  dns_splunk:
+    prober: dns
+    timeout: 5s
+    dns:
+      query_name: splunk.noellucas.io
+      query_type: A
+      transport_protocol: udp
+      valid_rcodes: [NOERROR]
+      validate_answer_rrs:
+        fail_if_not_matches_regexp:
+          - '.*\tIN\tA\t192\.168\..*'
+
+  dns_reverse:
+    prober: dns
+    timeout: 5s
+    dns:
+      query_name: 45.2.168.192.in-addr.arpa
+      query_type: PTR
+      transport_protocol: udp
+      valid_rcodes: [NOERROR]
+
+  dns_external:
+    prober: dns
+    timeout: 5s
+    dns:
+      query_name: cloudflare.com
+      query_type: A
+      transport_protocol: udp
+      valid_rcodes: [NOERROR]
+
+  dns_soa:
+    prober: dns
+    timeout: 5s
+    dns:
+      query_name: noellucas.io
+      query_type: SOA
+      transport_protocol: udp
+      valid_rcodes: [NOERROR]
